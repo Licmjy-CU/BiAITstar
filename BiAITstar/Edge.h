@@ -12,7 +12,7 @@
 
 #include <ompl/base/Cost.h>
 
-#include "BiAITstar/include/Queuetypes.h"
+#include "BiAITstar/Queuetypes.h"
 
 
 namespace ompl::geometric::biait {

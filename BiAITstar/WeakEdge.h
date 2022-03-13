@@ -12,8 +12,8 @@
 
 #include <ompl/base/Cost.h>
 
-#include "BiAITstar/include/Queuetypes.h"
-#include "BiAITstar/include/Edge.h"
+//#include "BiAITstar/Queuetypes.h"
+#include "BiAITstar/Edge.h"
 
 
 namespace ompl::geometric::biait {

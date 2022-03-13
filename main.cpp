@@ -2,7 +2,7 @@
 // Created by Chenming LI on 13/3/2022.
 //
 
-#include "BiAITstar//include/BiAIT.h"
+#include "BiAITstar//BiAIT.h"
 
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/ScopedState.h>
@@ -51,8 +51,8 @@ int main(int argc, char ** argv) {
     // ompl::base::PlannerPtr BiAITPtr = std::make_shared<ompl::geometric::BiAIT>(spaceInformationPtr);
     auto BiAITPtr = std::make_shared<ompl::geometric::BiAIT>(setup.getSpaceInformation());
     BiAITPtr->params().setParam("enable_early_truncate", std::to_string(0));
-    BiAITPtr->params().setParam("batch_size", std::to_string(11800));
-    BiAITPtr->params().setParam("rewire_factor", std::to_string(1.3));
+    BiAITPtr->params().setParam("batch_size", std::to_string(800));
+    BiAITPtr->params().setParam("rewire_factor", std::to_string(1.0));
     BiAITPtr->params().setParam("bridge_sample_rate", std::to_string(0.2));
     setup.setPlanner(BiAITPtr);
     setup.print();

@@ -2,7 +2,7 @@
 // Created by licm on 27/10/2021.
 //
 
-#include "BiAITstar/include/Vertex.h"
+#include "BiAITstar/Vertex.h"
 
 
 using ompl::geometric::biait::Vertex;

@@ -2,7 +2,7 @@
 // Created by Chenming LI on 18/1/2022.
 //
 
-#include "BiAITstar/include/WeakEdge.h"
+#include "BiAITstar/WeakEdge.h"
 
 ompl::geometric::biait::WeakEdge::WeakEdge(std::weak_ptr<Vertex> parent, std::weak_ptr<Vertex> child,
                                            const ompl::base::Cost &meetLazyEdgeKey)

@@ -6,10 +6,10 @@
 #define BIAIT_DEV_UTILITY_H
 
 
-#include "ImplicitGraph.h"
-#include "Queuetypes.h"
-#include "Vertex.h"
-#include "Edge.h"
+#include "BiAITstar/ImplicitGraph.h"
+#include "BiAITstar/Queuetypes.h"
+#include "BiAITstar/Vertex.h"
+#include "BiAITstar/Edge.h"
 
 #include "ompl/base/OptimizationObjective.h"
 

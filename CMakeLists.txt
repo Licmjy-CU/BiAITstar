@@ -42,9 +42,32 @@ MESSAGE(STATUS "    OMPLAPP_LIBRARIES: "  ${OMPLAPP_LIBRARIES})
 
 INCLUDE_DIRECTORIES(
         ${PROJECT_SOURCE_DIR}
-        ${OMPL_INCLUDE_DIRS})
+        ${OMPL_INCLUDE_DIRS}
+)
 
-ADD_SUBDIRECTORY(BiAITstar)
+ADD_LIBRARY(${PROJECT_NAME} SHARED
+        BiAITstar/BiAIT.h
+        BiAITstar/Edge.h
+        BiAITstar/GenerateId.h
+        BiAITstar/ImplicitGraph.h
+        BiAITstar/Queuetypes.h
+        BiAITstar/Utility.h
+        BiAITstar/Vertex.h
+        BiAITstar/WeakEdge.h
+
+        BiAITstar/src/BiAIT.cpp
+        BiAITstar/src/Edge.cpp
+        BiAITstar/src/ImplicitGraph.cpp
+        BiAITstar/src/Utility.cpp
+        BiAITstar/src/Vertex.cpp
+        BiAITstar/src/WeakEdge.cpp
+        )
+
+
+TARGET_LINK_LIBRARIES(${PROJECT_NAME}
+        ${OMPL_LIBRARIES}
+        )
+
 
 MESSAGE("TEST_STATE: " ${IS_TEST})
 IF(${IS_TEST})

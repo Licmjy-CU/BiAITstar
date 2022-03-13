@@ -5,10 +5,14 @@
 #ifndef BIAIT_DEV_BIAIT_H
 #define BIAIT_DEV_BIAIT_H
 
-#include "BiAITstar/include/Edge.h"
-#include "BiAITstar/include/WeakEdge.h"
-#include "BiAITstar/include/ImplicitGraph.h"
-#include "BiAITstar/include/Queuetypes.h"
+#ifndef BIAIT_SOURCE_PATH
+    #define BIAIT_SOURCE_PATH
+#endif
+
+#include "BiAITstar/Edge.h"
+#include "BiAITstar/WeakEdge.h"
+#include "BiAITstar/ImplicitGraph.h"
+#include "BiAITstar/Queuetypes.h"
 
 #include <ompl/geometric/PathGeometric.h>
 #include <ompl/base/objectives/PathLengthOptimizationObjective.h>

@@ -5,7 +5,7 @@
 #ifndef BIAIT_DEV_IMPLICITGRAPH_H
 #define BIAIT_DEV_IMPLICITGRAPH_H
 
-#include "BiAITstar/include/Vertex.h"
+#include "BiAITstar/Vertex.h"
 
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/datastructures/NearestNeighborsGNATNoThreadSafety.h>

@@ -5,10 +5,10 @@
 #ifndef BIAIT_DEV_VERTEX_H
 #define BIAIT_DEV_VERTEX_H
 
-#include "BiAITstar/include/GenerateId.h"
-#include "BiAITstar/include/Queuetypes.h"
-#include "BiAITstar/include/Edge.h"
-#include "BiAITstar/include/Utility.h"
+#include "BiAITstar/GenerateId.h"
+#include "BiAITstar/Queuetypes.h"
+#include "BiAITstar/Edge.h"
+#include "BiAITstar/Utility.h"
 
 #include <ompl/base/SpaceInformation.h>
 #include <ompl/base/ProblemDefinition.h>
@@ -33,7 +33,6 @@ namespace ompl::geometric::biait{
 
 
         // Invalidate the cost to the whole branch rooted at this vertex;
-        // TODO: whether update the cost of the opposite tree?
         // Recursively invalidates the branch;
         std::vector<std::weak_ptr<Vertex> > invalidateForwardValidBranch(
                 std::vector<Queuetypes::MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned);

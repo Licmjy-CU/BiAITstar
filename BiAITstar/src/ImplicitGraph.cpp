@@ -2,7 +2,7 @@
 // Created by licm on 28/10/2021.
 //
 
-#include "BiAITstar/include/ImplicitGraph.h"
+#include "BiAITstar/ImplicitGraph.h"
 
 #include <boost/math/constants/constants.hpp>
 

@@ -2,7 +2,7 @@
 // Created by Chenming LI on 18/11/2021.
 //
 
-#include "BiAITstar/include/BiAIT.h"
+#include "BiAITstar/BiAIT.h"
 
 namespace ompl::geometric {
 

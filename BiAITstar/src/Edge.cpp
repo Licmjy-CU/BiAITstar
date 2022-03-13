@@ -2,7 +2,7 @@
 // Created by licm on 28/10/2021.
 //
 
-#include "BiAITstar/include/Edge.h"
+#include "BiAITstar/Edge.h"
 
 //#include <utility>
 
