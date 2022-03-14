@@ -18,6 +18,13 @@
 namespace ompl::geometric::biait {
 
     class Vertex;
+    class Edge;
+    using EdgeQueue = ompl::BinaryHeap<Edge, std::function<bool(const Edge &, const Edge &)> >;
+
+    // The cost is the meetEdgeCost, didn't use for sorting;
+    using CostEdgePair = std::pair<base::Cost, Edge>;
+
+    using MeetValidEdgeQueue = ompl::BinaryHeap<CostEdgePair, std::function<bool(const CostEdgePair &, const CostEdgePair &)> >;
 
     class Edge {
     public:
@@ -74,6 +81,8 @@ namespace ompl::geometric::biait {
         base::Cost meetValidEdgeKey_;
 
     };
+
+
 
 }
 

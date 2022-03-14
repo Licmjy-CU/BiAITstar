@@ -18,20 +18,20 @@ namespace ompl::geometric::biait {
     class Vertex;
     class WeakEdge;
 
-    using EdgeQueue = ompl::BinaryHeap<Edge, std::function<bool(const Edge &, const Edge &)> >;
+//    using EdgeQueue = ompl::BinaryHeap<Edge, std::function<bool(const Edge &, const Edge &)> >;
 
-    using MeetLazyEdgeQueue = ompl::BinaryHeap<WeakEdge, std::function<bool(const WeakEdge &, const WeakEdge &)> >;
+//    using MeetLazyEdgeQueue = ompl::BinaryHeap<WeakEdge, std::function<bool(const WeakEdge &, const WeakEdge &)> >;
 
     // The cost is the meetEdgeCost, didn't use for sorting;
-    using CostEdgePair = std::pair<base::Cost, Edge>;
-
-    using MeetValidEdgeQueue = ompl::BinaryHeap<CostEdgePair, std::function<bool(const CostEdgePair &, const CostEdgePair &)> >;
+//    using CostEdgePair = std::pair<base::Cost, Edge>;
+//
+//    using MeetValidEdgeQueue = ompl::BinaryHeap<CostEdgePair, std::function<bool(const CostEdgePair &, const CostEdgePair &)> >;
 
     // A type for elements in the vertex queue;
-    using KeyVertexPair = std::pair<std::array<ompl::base::Cost, 2u>, std::shared_ptr<Vertex> >;
-
-    using VertexQueue =
-        ompl::BinaryHeap<KeyVertexPair, std::function<bool(const KeyVertexPair &, const KeyVertexPair &)> >;
+//    using KeyVertexPair = std::pair<std::array<ompl::base::Cost, 2u>, std::shared_ptr<Vertex> >;
+//
+//    using VertexQueue =
+//        ompl::BinaryHeap<KeyVertexPair, std::function<bool(const KeyVertexPair &, const KeyVertexPair &)> >;
 
 }
 

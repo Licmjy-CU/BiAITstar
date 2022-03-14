@@ -8,6 +8,7 @@
 #include "BiAITstar/GenerateId.h"
 #include "BiAITstar/Queuetypes.h"
 #include "BiAITstar/Edge.h"
+#include "WeakEdge.h"
 #include "BiAITstar/Utility.h"
 
 #include <ompl/base/SpaceInformation.h>
@@ -19,6 +20,14 @@
 
 
 namespace ompl::geometric::biait{
+
+    class Vertex;
+
+    // A type for elements in the vertex queue;
+    using KeyVertexPair = std::pair<std::array<ompl::base::Cost, 2u>, std::shared_ptr<Vertex> >;
+
+    using VertexQueue =
+    ompl::BinaryHeap<KeyVertexPair, std::function<bool(const KeyVertexPair &, const KeyVertexPair &)> >;
 
     class Vertex {
     public:
@@ -319,6 +328,8 @@ namespace ompl::geometric::biait{
 
 
     }; // class Vertex;
+
+
 
 } // namespace;
 

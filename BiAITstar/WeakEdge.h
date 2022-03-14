@@ -57,6 +57,8 @@ namespace ompl::geometric::biait {
         base::Cost meetLazyEdgeKey_;
     };
 
+    using MeetLazyEdgeQueue = ompl::BinaryHeap<WeakEdge, std::function<bool(const WeakEdge &, const WeakEdge &)> >;
+
 }
 
 
