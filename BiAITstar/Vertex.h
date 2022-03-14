@@ -35,10 +35,10 @@ namespace ompl::geometric::biait{
         // Invalidate the cost to the whole branch rooted at this vertex;
         // Recursively invalidates the branch;
         std::vector<std::weak_ptr<Vertex> > invalidateForwardValidBranch(
-                std::vector<Queuetypes::MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned);
+                std::vector<MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned);
 
         std::vector<std::weak_ptr<Vertex> > invalidateReverseValidBranch(
-                std::vector<Queuetypes::MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned);
+                std::vector<MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned);
 
         std::vector<std::weak_ptr<Vertex> > invalidateForwardLazyBranch();
 
@@ -195,29 +195,29 @@ namespace ompl::geometric::biait{
 
         std::vector<std::shared_ptr<Vertex> > getCachedNeighbors() const;
 
-        void setForwardLazyQueuePointer(typename Queuetypes::VertexQueue::Element * pointer);
+        void setForwardLazyQueuePointer(typename VertexQueue::Element * pointer);
 
-        void setReverseLazyQueuePointer(typename Queuetypes::VertexQueue::Element * pointer);
+        void setReverseLazyQueuePointer(typename VertexQueue::Element * pointer);
 
         void resetForwardLazyQueuePointer() { forwardLazyQueuePointer_ = nullptr; }
 
         void resetReverseLazyQueuePointer() { reverseLazyQueuePointer_ = nullptr; }
 
-        void addToValidQueueIncomingLookupFromStart(Queuetypes::EdgeQueue::Element *pointer);
+        void addToValidQueueIncomingLookupFromStart(EdgeQueue::Element *pointer);
 
-        void addToValidQueueOutgoingLookupFromStart(Queuetypes::EdgeQueue::Element *pointer);
+        void addToValidQueueOutgoingLookupFromStart(EdgeQueue::Element *pointer);
 
-        void addToValidQueueIncomingLookupFromGoal(Queuetypes::EdgeQueue::Element *pointer);
+        void addToValidQueueIncomingLookupFromGoal(EdgeQueue::Element *pointer);
 
-        void addToValidQueueOutgoingLookupFromGoal(Queuetypes::EdgeQueue::Element *pointer);
+        void addToValidQueueOutgoingLookupFromGoal(EdgeQueue::Element *pointer);
 
-        void removeFromValidQueueIncomingLookupFromStart(Queuetypes::EdgeQueue::Element * pointer);
+        void removeFromValidQueueIncomingLookupFromStart(EdgeQueue::Element * pointer);
 
-        void removeFromValidQueueOutgoingLookupFromStart(Queuetypes::EdgeQueue::Element * pointer);
+        void removeFromValidQueueOutgoingLookupFromStart(EdgeQueue::Element * pointer);
 
-        void removeFromValidQueueIncomingLookupFromGoal(Queuetypes::EdgeQueue::Element * pointer);
+        void removeFromValidQueueIncomingLookupFromGoal(EdgeQueue::Element * pointer);
 
-        void removeFromValidQueueOutgoingLookupFromGoal(Queuetypes::EdgeQueue::Element * pointer);
+        void removeFromValidQueueOutgoingLookupFromGoal(EdgeQueue::Element * pointer);
 
         std::bitset<5> getCategory() const { return category_; }
 
@@ -250,21 +250,21 @@ namespace ompl::geometric::biait{
 
         void setHeuristicCostsToInfinity();
 
-        mutable typename Queuetypes::VertexQueue::Element * forwardLazyQueuePointer_{nullptr};
+        mutable typename VertexQueue::Element * forwardLazyQueuePointer_{nullptr};
 
-        mutable typename Queuetypes::VertexQueue::Element * reverseLazyQueuePointer_{nullptr};
+        mutable typename VertexQueue::Element * reverseLazyQueuePointer_{nullptr};
 
-        mutable std::vector<Queuetypes::EdgeQueue::Element *> validQueueIncomingLookupFromStart_{};
+        mutable std::vector<EdgeQueue::Element *> validQueueIncomingLookupFromStart_{};
 
-        mutable std::vector<Queuetypes::EdgeQueue::Element *> validQueueOutgoingLookupFromStart_{};
+        mutable std::vector<EdgeQueue::Element *> validQueueOutgoingLookupFromStart_{};
 
-        mutable std::vector<Queuetypes::EdgeQueue::Element *> validQueueIncomingLookupFromGoal_{};
+        mutable std::vector<EdgeQueue::Element *> validQueueIncomingLookupFromGoal_{};
 
-        mutable std::vector<Queuetypes::EdgeQueue::Element *> validQueueOutgoingLookupFromGoal_{};
+        mutable std::vector<EdgeQueue::Element *> validQueueOutgoingLookupFromGoal_{};
 
-        mutable std::vector<Queuetypes::MeetValidEdgeQueue::Element *> meetValidEdgeQueuePointer_{};
+        mutable std::vector<MeetValidEdgeQueue::Element *> meetValidEdgeQueuePointer_{};
 
-        mutable std::vector<Queuetypes::MeetLazyEdgeQueue::Element *> meetLazyEdgeQueuePointer_{};
+        mutable std::vector<MeetLazyEdgeQueue::Element *> meetLazyEdgeQueuePointer_{};
 
         mutable int * debugVertex{nullptr};
 

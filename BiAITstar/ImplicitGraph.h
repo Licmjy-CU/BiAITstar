@@ -33,7 +33,7 @@ namespace ompl::geometric::biait {
         void clear();   // Reset;
 
         // Return: vector of ptr that point to the meet valid edges which can not help to improve current solution anymore;
-        std::vector<Queuetypes::MeetValidEdgeQueue::Element *> prune();
+        std::vector<MeetValidEdgeQueue::Element *> prune();
 
         void registerStartState(const base::State * const startState);
 
@@ -174,7 +174,7 @@ namespace ompl::geometric::biait {
         // The number of state collision checks;
         mutable std::size_t numNearestNeighborsCalls_{0u};
 
-        std::vector<Queuetypes::MeetValidEdgeQueue::Element *> vectorOfMeetValidEdgesToBePruned_{};
+        std::vector<MeetValidEdgeQueue::Element *> vectorOfMeetValidEdgesToBePruned_{};
     };
 }
 

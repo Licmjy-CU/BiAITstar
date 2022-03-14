@@ -167,7 +167,7 @@ namespace ompl::geometric {
             elem->setCategory(3, true);
             elem->heuristicCost_rhs_ForwardLazy_ = optObjPtr_->identityCost();
             elem->heuristicCost_g_ForwardLazy_ = optObjPtr_->infiniteCost();
-            Queuetypes::KeyVertexPair elemKeyPair({computeCostToGoalHeuristic(elem), optObjPtr_->identityCost()},
+            KeyVertexPair elemKeyPair({computeCostToGoalHeuristic(elem), optObjPtr_->identityCost()},
                                                   elem);
             elem->setForwardLazyQueuePointer(forwardLazyQueue_.insert(elemKeyPair));
         }
@@ -179,7 +179,7 @@ namespace ompl::geometric {
             elem->setCategory(0, true);
             elem->heuristicCost_rhs_ReverseLazy_ = optObjPtr_->identityCost();
             elem->heuristicCost_g_ReverseLazy_ = optObjPtr_->infiniteCost();
-            Queuetypes::KeyVertexPair elemKeyPair({computeCostToStartHeuristic(elem), optObjPtr_->identityCost()},
+            KeyVertexPair elemKeyPair({computeCostToStartHeuristic(elem), optObjPtr_->identityCost()},
                                               elem);
             elem->setReverseLazyQueuePointer(reverseLazyQueue_.insert(elemKeyPair));
         }
@@ -207,7 +207,7 @@ namespace ompl::geometric {
         }
         vertex->heuristicCost_rhs_ForwardLazy_ = vertex->costToStart_;
         vertex->heuristicCost_g_ForwardLazy_ = optObjPtr_->infiniteCost();
-        Queuetypes::KeyVertexPair elemKeyPair({optObjPtr_->combineCosts(vertex->heuristicCost_rhs_ForwardLazy_,
+        KeyVertexPair elemKeyPair({optObjPtr_->combineCosts(vertex->heuristicCost_rhs_ForwardLazy_,
                                                                         computeCostToGoalHeuristic(vertex)),
                                                vertex->heuristicCost_rhs_ForwardLazy_},
                                               vertex);
@@ -223,7 +223,7 @@ namespace ompl::geometric {
         }
         vertex->heuristicCost_rhs_ReverseLazy_ = vertex->costToGoal_;
         vertex->heuristicCost_g_ReverseLazy_ = optObjPtr_->infiniteCost();
-        Queuetypes::KeyVertexPair elemKeyPair({optObjPtr_->combineCosts(vertex->heuristicCost_rhs_ReverseLazy_,
+        KeyVertexPair elemKeyPair({optObjPtr_->combineCosts(vertex->heuristicCost_rhs_ReverseLazy_,
                                                                         computeCostToStartHeuristic(vertex)),
                                                vertex->heuristicCost_rhs_ReverseLazy_},
                                               vertex);
@@ -916,7 +916,7 @@ namespace ompl::geometric {
     }
 
 
-    bool BiAIT::isVertexBetter(const Queuetypes::KeyVertexPair &lhs, const Queuetypes::KeyVertexPair &rhs) const {
+    bool BiAIT::isVertexBetter(const KeyVertexPair &lhs, const KeyVertexPair &rhs) const {
         // TODO: Debug for this function; suppose there are bugs;
         // Vertex queuing method is directly transferred from the one in AIT_star, but modified to root;
         // If the costs of two vertices are equal then we prioritize inconsistent vertices that are targets of
@@ -1461,7 +1461,7 @@ namespace ompl::geometric {
 
 
     void BiAIT::clearForwardLazyQueue() {
-        std::vector<Queuetypes::KeyVertexPair> forwardLazyQueue;
+        std::vector<KeyVertexPair> forwardLazyQueue;
         forwardLazyQueue_.getContent(forwardLazyQueue);
         for(const auto & elem: forwardLazyQueue) {
             elem.second->resetForwardLazyQueuePointer();
@@ -1471,7 +1471,7 @@ namespace ompl::geometric {
 
 
     void BiAIT::clearReverseLazyQueue() {
-        std::vector<Queuetypes::KeyVertexPair> reverseLazyQueue;
+        std::vector<KeyVertexPair> reverseLazyQueue;
         reverseLazyQueue_.getContent(reverseLazyQueue);
         for(const auto & elem: reverseLazyQueue) {
             elem.second->resetReverseLazyQueuePointer();
@@ -1481,7 +1481,7 @@ namespace ompl::geometric {
 
 
     void BiAIT::restoreVerticesInForwardLazyQueue() {
-        std::vector<Queuetypes::KeyVertexPair> forwardLazyQueue;
+        std::vector<KeyVertexPair> forwardLazyQueue;
         forwardLazyQueue_.getContent(forwardLazyQueue);
         for(const auto & elem: forwardLazyQueue) {
             if(!elem.second->meetLazyEdgeQueuePointer_.empty() || elem.second->getCategory()[4]){
@@ -1498,7 +1498,7 @@ namespace ompl::geometric {
 
 
     void BiAIT::restoreVerticesInReverseLazyQueue() {
-        std::vector<Queuetypes::KeyVertexPair> reverseLazyQueue;
+        std::vector<KeyVertexPair> reverseLazyQueue;
         reverseLazyQueue_.getContent(reverseLazyQueue);
         for(const auto & elem: reverseLazyQueue) {
             if(!elem.second->meetLazyEdgeQueuePointer_.empty() || elem.second->getCategory()[1]){
@@ -2364,7 +2364,7 @@ namespace ompl::geometric {
     }
 
 
-    biait::Queuetypes::MeetLazyEdgeQueue::Element * BiAIT::findInMeetLazyQueue(const Edge & edge) {
+    MeetLazyEdgeQueue::Element * BiAIT::findInMeetLazyQueue(const Edge & edge) {
         // We encourage making the parent close to the start and child close to the goal; But this function can also work otherwise;
         auto parentId = edge.getParent()->getId();
         auto childId = edge.getChild()->getId();
@@ -2393,7 +2393,7 @@ namespace ompl::geometric {
     }
 
 
-    biait::Queuetypes::MeetLazyEdgeQueue::Element * BiAIT::findInMeetLazyQueue(const WeakEdge & edge) {
+    MeetLazyEdgeQueue::Element * BiAIT::findInMeetLazyQueue(const WeakEdge & edge) {
         // We encourage making the parent close to the start and child close to the goal; But this function can also work otherwise;
         auto parentId = edge.getParent().lock()->getId();
         auto childId = edge.getChild().lock()->getId();
@@ -2422,11 +2422,11 @@ namespace ompl::geometric {
     }
 
 
-    biait::Queuetypes::MeetValidEdgeQueue::Element * BiAIT::findInMeetValidQueue(const Edge & edge) {
+    MeetValidEdgeQueue::Element * BiAIT::findInMeetValidQueue(const Edge & edge) {
         // We encourage making the parent close to the start and child close to the goal; But this function can also work otherwise;
         auto parentId = edge.getParent()->getId();
         auto childId = edge.getChild()->getId();
-        std::vector<Queuetypes::CostEdgePair> meetValidEdges{};
+        std::vector<CostEdgePair> meetValidEdges{};
         meetValidEdgeQueue_.getContent(meetValidEdges);
         auto found = std::find_if(meetValidEdges.begin(), meetValidEdges.end(),
                                   [parentId, childId](const auto & elem){ return
@@ -2450,7 +2450,7 @@ namespace ompl::geometric {
     }
 
 
-    void BiAIT::removeFromMeetValidQueue(const std::vector<Queuetypes::MeetValidEdgeQueue::Element *>& vectorOfMeetValidEdgesToBePruned){
+    void BiAIT::removeFromMeetValidQueue(const std::vector<MeetValidEdgeQueue::Element *>& vectorOfMeetValidEdgesToBePruned){
         for(const auto & elem: vectorOfMeetValidEdgesToBePruned){
             if(elem->data.second.getParent()->meetValidEdgeQueuePointer_.size() == 1){
                 // TODO: propagate the change of cost-to-Goal to inf via FV branch;
@@ -2499,7 +2499,7 @@ namespace ompl::geometric {
     }
 
 
-    void BiAIT::checkMeetLazyEdgeToValid(Queuetypes::MeetLazyEdgeQueue::Element *meetLazyEdgePointer) {
+    void BiAIT::checkMeetLazyEdgeToValid(MeetLazyEdgeQueue::Element *meetLazyEdgePointer) {
         if(!meetLazyEdgePointer->data.getParent().lock() || !meetLazyEdgePointer->data.getChild().lock()) {
             return ;
         }

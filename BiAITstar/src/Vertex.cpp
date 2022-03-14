@@ -64,7 +64,7 @@ Vertex::~Vertex() {
 
 
 std::vector<std::weak_ptr<Vertex> > Vertex::invalidateForwardValidBranch(
-        std::vector<Queuetypes::MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned) {
+        std::vector<MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned) {
     std::vector<std::weak_ptr<Vertex> > accumulatedChildren = forwardValidChildren_;
     // accumulatedChildren.insert(accumulatedChildren.end(), forwardLazyChildren_.begin(), forwardLazyChildren_.end());
     for(const auto & elem: accumulatedChildren){
@@ -93,7 +93,7 @@ std::vector<std::weak_ptr<Vertex> > Vertex::invalidateForwardValidBranch(
 
 
 std::vector<std::weak_ptr<Vertex> > Vertex::invalidateReverseValidBranch(
-        std::vector<Queuetypes::MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned) {
+        std::vector<MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned) {
     std::vector<std::weak_ptr<Vertex> > accumulatedChildren = reverseValidChildren_;
     // accumulatedChildren.insert(accumulatedChildren.end(), reverseLazyChildren_.begin(), reverseLazyChildren_.end());
     for(const auto & elem: accumulatedChildren){
@@ -427,28 +427,28 @@ void Vertex::setReverseLazyParent(const std::shared_ptr<Vertex> &vertex) {
 }
 
 
-void Vertex::removeFromValidQueueIncomingLookupFromStart(Queuetypes::EdgeQueue::Element * pointer) {
+void Vertex::removeFromValidQueueIncomingLookupFromStart(EdgeQueue::Element * pointer) {
     validQueueIncomingLookupFromStart_.erase(
         std::remove(validQueueIncomingLookupFromStart_.begin(), validQueueIncomingLookupFromStart_.end(), pointer), validQueueIncomingLookupFromStart_.end()
     );
 }
 
 
-void Vertex::removeFromValidQueueOutgoingLookupFromStart(Queuetypes::EdgeQueue::Element * pointer) {
+void Vertex::removeFromValidQueueOutgoingLookupFromStart(EdgeQueue::Element * pointer) {
     validQueueOutgoingLookupFromStart_.erase(
         std::remove(validQueueOutgoingLookupFromStart_.begin(), validQueueOutgoingLookupFromStart_.end(), pointer), validQueueOutgoingLookupFromStart_.end()
     );
 }
 
 
-void Vertex::removeFromValidQueueIncomingLookupFromGoal(Queuetypes::EdgeQueue::Element * pointer) {
+void Vertex::removeFromValidQueueIncomingLookupFromGoal(EdgeQueue::Element * pointer) {
     validQueueIncomingLookupFromGoal_.erase(
             std::remove(validQueueIncomingLookupFromGoal_.begin(), validQueueIncomingLookupFromGoal_.end(), pointer), validQueueIncomingLookupFromGoal_.end()
     );
 }
 
 
-void Vertex::removeFromValidQueueOutgoingLookupFromGoal(Queuetypes::EdgeQueue::Element * pointer) {
+void Vertex::removeFromValidQueueOutgoingLookupFromGoal(EdgeQueue::Element * pointer) {
     validQueueOutgoingLookupFromGoal_.erase(
             std::remove(validQueueOutgoingLookupFromGoal_.begin(), validQueueOutgoingLookupFromGoal_.end(), pointer), validQueueOutgoingLookupFromGoal_.end()
     );
@@ -518,42 +518,32 @@ std::vector<std::shared_ptr<Vertex> > Vertex::getCachedNeighbors() const {
 }
 
 
-void Vertex::setForwardLazyQueuePointer(typename Queuetypes::VertexQueue::Element * pointer) {
+void Vertex::setForwardLazyQueuePointer(typename VertexQueue::Element * pointer) {
     forwardLazyQueuePointer_ = pointer;
 }
 
 
-void Vertex::setReverseLazyQueuePointer(typename Queuetypes::VertexQueue::Element * pointer) {
+void Vertex::setReverseLazyQueuePointer(typename VertexQueue::Element * pointer) {
     reverseLazyQueuePointer_ = pointer;
 }
 
 
-//ompl::BinaryHeap<ompl::geometric::biait::Queuetypes::KeyVertexPair,
-//                 std::function<bool(const ompl::geometric::biait::Queuetypes::KeyVertexPair &,
-//                                    const ompl::geometric::biait::Queuetypes::KeyVertexPair &)>>::Element * Vertex::getOppositeQueuePointer() const {
-//    if(batchId_ != lazyQueuePointerId_){
-//        lazyQueuePointer_ = nullptr;
-//    }
-//    return lazyQueuePointer_;
-//}
-
-
-void Vertex::addToValidQueueIncomingLookupFromStart(Queuetypes::EdgeQueue::Element *pointer) {
+void Vertex::addToValidQueueIncomingLookupFromStart(EdgeQueue::Element *pointer) {
     validQueueIncomingLookupFromStart_.emplace_back(pointer);
 }
 
 
-void Vertex::addToValidQueueOutgoingLookupFromStart(Queuetypes::EdgeQueue::Element *pointer) {
+void Vertex::addToValidQueueOutgoingLookupFromStart(EdgeQueue::Element *pointer) {
     validQueueOutgoingLookupFromStart_.emplace_back(pointer);
 }
 
 
-void Vertex::addToValidQueueIncomingLookupFromGoal(Queuetypes::EdgeQueue::Element *pointer) {
+void Vertex::addToValidQueueIncomingLookupFromGoal(EdgeQueue::Element *pointer) {
     validQueueIncomingLookupFromGoal_.emplace_back(pointer);
 }
 
 
-void Vertex::addToValidQueueOutgoingLookupFromGoal(Queuetypes::EdgeQueue::Element *pointer) {
+void Vertex::addToValidQueueOutgoingLookupFromGoal(EdgeQueue::Element *pointer) {
     validQueueOutgoingLookupFromGoal_.emplace_back(pointer);
 }
 

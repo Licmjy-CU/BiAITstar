@@ -46,9 +46,6 @@ namespace ompl::geometric::biait {
 
         void setEdgeKey(const std::array<base::Cost, 3u> & edgeKey) { edgeKey_ = edgeKey; } // maybe the r-value reference works better;
 
-        // Move to the class Vertex;
-        // mutable Queuetypes::EdgeQueue::Element * meetLazyEdgeQueuePointer_{nullptr};
-
         const base::Cost & getMeetValidEdgeKey() const { return meetValidEdgeKey_; }
 
         void setMeetValidEdgeKey(const base::Cost meetValidEdgeKey) { meetValidEdgeKey_ = meetValidEdgeKey; }

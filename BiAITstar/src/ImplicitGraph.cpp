@@ -53,7 +53,7 @@ namespace ompl::geometric::biait {
     }
 
 
-    std::vector<Queuetypes::MeetValidEdgeQueue::Element *> ImplicitGraph::prune() {
+    std::vector<MeetValidEdgeQueue::Element *> ImplicitGraph::prune() {
         vectorOfMeetValidEdgesToBePruned_.clear();
         if(!optObjPtr_->isFinite(solutionCost_)){
             return vectorOfMeetValidEdgesToBePruned_;

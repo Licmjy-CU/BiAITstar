@@ -5,10 +5,6 @@
 #ifndef BIAIT_DEV_BIAIT_H
 #define BIAIT_DEV_BIAIT_H
 
-#ifndef BIAIT_SOURCE_PATH
-    #define BIAIT_SOURCE_PATH
-#endif
-
 #include "BiAITstar/Edge.h"
 #include "BiAITstar/WeakEdge.h"
 #include "BiAITstar/ImplicitGraph.h"
@@ -161,7 +157,7 @@ namespace ompl::geometric{
 
         bool isEdgeBetter(const biait::Edge& lhs, const biait::Edge & rhs) const;
 
-        bool isMeetValidEdgeBetter(const biait::Queuetypes::CostEdgePair & lhs, const biait::Queuetypes::CostEdgePair & rhs) const {
+        bool isMeetValidEdgeBetter(const biait::CostEdgePair & lhs, const biait::CostEdgePair & rhs) const {
             return optObjPtr_->isCostBetterThan(lhs.second.getMeetValidEdgeKey(), rhs.second.getMeetValidEdgeKey());
         }
 
@@ -169,7 +165,7 @@ namespace ompl::geometric{
             return optObjPtr_->isCostBetterThan(lhs.getMeetLazyEdgeKey(), rhs.getMeetLazyEdgeKey());
         }
 
-        bool isVertexBetter(const biait::Queuetypes::KeyVertexPair &lhs, const biait::Queuetypes::KeyVertexPair &rhs) const;
+        bool isVertexBetter(const biait::KeyVertexPair &lhs, const biait::KeyVertexPair &rhs) const;
 
         base::Cost computeBestCostHeuristic(const std::shared_ptr<Vertex> & vertex, const std::vector<std::shared_ptr<Vertex> > & vectorVertex) const;
 
@@ -296,21 +292,21 @@ namespace ompl::geometric{
         void updateRVValidQueueIfVertexInside(const std::shared_ptr<Vertex> & vertex);
 
         // If found, return the pointer to that in the meetLazyQueue, otherwise, return nullptr;
-        biait::Queuetypes::MeetLazyEdgeQueue::Element * findInMeetLazyQueue(const Edge & edge);
+        MeetLazyEdgeQueue::Element * findInMeetLazyQueue(const Edge & edge);
 
         // If found, return the pointer to that in the meetLazyQueue, otherwise, return nullptr;
-        biait::Queuetypes::MeetLazyEdgeQueue::Element * findInMeetLazyQueue(const WeakEdge & edge);
+        MeetLazyEdgeQueue::Element * findInMeetLazyQueue(const WeakEdge & edge);
 
         // If found, return the pointer to that in the meetValidQueue, otherwise, return nullptr;
-        biait::Queuetypes::MeetValidEdgeQueue::Element * findInMeetValidQueue(const Edge & edge);
+        MeetValidEdgeQueue::Element * findInMeetValidQueue(const Edge & edge);
 
-        void removeFromMeetValidQueue(const std::vector<Queuetypes::MeetValidEdgeQueue::Element *>& vectorOfMeetValidEdgesToBePruned);
+        void removeFromMeetValidQueue(const std::vector<MeetValidEdgeQueue::Element *>& vectorOfMeetValidEdgesToBePruned);
 
         void rebuildForwardValidQueue();
 
         void rebuildReverseValidQueue();
 
-        void checkMeetLazyEdgeToValid(Queuetypes::MeetLazyEdgeQueue::Element * meetLazyEdgePointer);
+        void checkMeetLazyEdgeToValid(MeetLazyEdgeQueue::Element * meetLazyEdgePointer);
 
         /* ##########  ##########  ##########  ##########  ########## */
         /*                          Members                           */
@@ -321,21 +317,21 @@ namespace ompl::geometric{
         biait::ImplicitGraph implicitGraph_;
 
         // In forward valid queue, the parent is close to the start and child is far from the start;
-        biait::Queuetypes::EdgeQueue forwardValidQueue_;
+        biait::EdgeQueue forwardValidQueue_;
 
         // In forward valid queue, the parent is close to the goal and child is far from the goal;
-        biait::Queuetypes::EdgeQueue reverseValidQueue_;
+        biait::EdgeQueue reverseValidQueue_;
 
         // We have to make sure the parent of MeetEdge is close to the start, and child is close to the goal(s);
         // We use this one for the valid trees meet;
-        mutable biait::Queuetypes::MeetValidEdgeQueue meetValidEdgeQueue_;
+        mutable biait::MeetValidEdgeQueue meetValidEdgeQueue_;
 
         // \hat{h}_{g-FL}(x_p) + \hat{c}(x_p, x_c) + \hat{h}_{g-RL}(x_c);
-        mutable biait::Queuetypes::MeetLazyEdgeQueue meetLazyEdgeQueue_;
+        mutable biait::MeetLazyEdgeQueue meetLazyEdgeQueue_;
 
-        biait::Queuetypes::VertexQueue forwardLazyQueue_;
+        biait::VertexQueue forwardLazyQueue_;
 
-        biait::Queuetypes::VertexQueue reverseLazyQueue_;
+        biait::VertexQueue reverseLazyQueue_;
 
         std::size_t numIterations_{0u};
 
