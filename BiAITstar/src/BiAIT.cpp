@@ -767,7 +767,7 @@ namespace ompl::geometric {
     }
 
 
-    PathGeometricPtr BiAIT::getPathToGoal() const {
+    std::shared_ptr<geometric::PathGeometric> BiAIT::getPathToGoal() const {
         auto bestMeetEdge = meetValidEdgeQueue_.top();
         if(bestMeetEdge->data.second.getParent()->getForwardValidParent() == nullptr || bestMeetEdge->data.second.getChild()->getReverseValidParent() == nullptr){
             Utility::removeFromVectorByValue(bestMeetEdge->data.second.getParent()->meetValidEdgeQueuePointer_, meetValidEdgeQueue_.top());
@@ -776,7 +776,7 @@ namespace ompl::geometric {
             return nullptr;
         }
         if (static_cast<bool>(bestMeetEdge)) {
-            PathGeometricPtr path = std::make_shared<geometric::PathGeometric>(spaceInformationPtr_);
+            std::shared_ptr<geometric::PathGeometric> path = std::make_shared<geometric::PathGeometric>(spaceInformationPtr_);
             assert(bestMeetEdge->data.second.getCategory()[2]);       // Its category should be 0b00100;
             // Query to start;
             std::vector<std::shared_ptr<Vertex> > invertedPathToStart{};     // Retrieve the vertices vector and store reversely;

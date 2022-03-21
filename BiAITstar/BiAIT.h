@@ -137,7 +137,7 @@ namespace ompl::geometric{
 
             std::size_t countNumVerticesInReverseLazyPortion() const;
 
-            PathGeometricPtr getPathToGoal() const;
+            std::shared_ptr<geometric::PathGeometric> getPathToGoal() const;
 
             bool isEdgeBetter(const biait::Edge& lhs, const biait::Edge & rhs) const;
 
