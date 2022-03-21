@@ -30,33 +30,6 @@ Vertex::Vertex(const base::SpaceInformationPtr &spaceInformationPtr,
 }
 
 
-//Vertex::Vertex(const std::shared_ptr<Vertex> &other)
-//    : spaceInformationPtr_(other->spaceInformationPtr_)
-//    , problemDefinitionPtr_(other->problemDefinitionPtr_)
-//    , optObjPtr_(other->optObjPtr_)
-//    , forwardValidChildren_(other->forwardLazyChildren_)
-//    , reverseValidChildren_(other->reverseValidChildren_)
-//    , forwardLazyChildren_(other->forwardLazyChildren_)
-//    , reverseLazyChildren_(other->reverseLazyChildren_)
-//    , forwardValidParent_(other->forwardValidParent_)
-//    , reverseValidParent_(other->reverseValidParent_)
-//    , forwardLazyParent_(other->forwardLazyParent_)
-//    , reverseLazyParent_(other->reverseLazyParent_)
-//    , statePtr_(spaceInformationPtr_->allocState())
-//    , heuristicCost_g_ForwardLazy_(other->heuristicCost_g_ForwardLazy_)
-//    , heuristicCost_rhs_ForwardLazy_(other->heuristicCost_rhs_ForwardLazy_)
-//    , heuristicCost_g_ReverseLazy_(other->heuristicCost_g_ReverseLazy_)
-//    , heuristicCost_rhs_ReverseLazy_(other->heuristicCost_rhs_ReverseLazy_)
-//    , edgeCostFromStart_(other->edgeCostFromStart_)
-//    , edgeCostFromGoal_(other->edgeCostFromGoal_)
-//    , costToStart_(other->costToStart_)
-//    , costToGoal_(other->costToGoal_)
-//    , vertexId_(other->vertexId_)
-//    , batchId_(other->batchId_) {
-//    spaceInformationPtr_->copyState(statePtr_, other->statePtr_);
-//}
-//
-
 Vertex::~Vertex() {
     spaceInformationPtr_->freeState(statePtr_);
     delete debugVertex;
@@ -66,7 +39,6 @@ Vertex::~Vertex() {
 std::vector<std::weak_ptr<Vertex> > Vertex::invalidateForwardValidBranch(
         std::vector<MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned) {
     std::vector<std::weak_ptr<Vertex> > accumulatedChildren = forwardValidChildren_;
-    // accumulatedChildren.insert(accumulatedChildren.end(), forwardLazyChildren_.begin(), forwardLazyChildren_.end());
     for(const auto & elem: accumulatedChildren){
         if(auto elemSharedPtr = elem.lock()){
             elemSharedPtr->costToStart_ =  optObjPtr_->infiniteCost();
@@ -95,7 +67,6 @@ std::vector<std::weak_ptr<Vertex> > Vertex::invalidateForwardValidBranch(
 std::vector<std::weak_ptr<Vertex> > Vertex::invalidateReverseValidBranch(
         std::vector<MeetValidEdgeQueue::Element *> & vectorOfMeetValidEdgesToBePruned) {
     std::vector<std::weak_ptr<Vertex> > accumulatedChildren = reverseValidChildren_;
-    // accumulatedChildren.insert(accumulatedChildren.end(), reverseLazyChildren_.begin(), reverseLazyChildren_.end());
     for(const auto & elem: accumulatedChildren){
         if(auto elemSharedPtr = elem.lock()){
             elemSharedPtr->costToGoal_ = optObjPtr_->infiniteCost();
@@ -185,7 +156,6 @@ void Vertex::removeFromForwardLazyChildren(std::size_t vertexId) {
 std::vector<std::shared_ptr<Vertex> > Vertex::getForwardLazyChildren() const {
     std::vector<std::shared_ptr<Vertex> > outputLazyChildren;
     for(const auto & elem: forwardLazyChildren_) {
-//        assert(!elem.expired());
         if(elem.expired()) continue;
         outputLazyChildren.emplace_back(elem.lock());
     }
@@ -229,7 +199,6 @@ void Vertex::removeFromReverseLazyChildren(std::size_t vertexId) {
 std::vector<std::shared_ptr<Vertex> > Vertex::getReverseLazyChildren() const {
     std::vector<std::shared_ptr<Vertex> > outputLazyChildren;
     for(const auto & elem: reverseLazyChildren_) {
-//        assert(!elem.expired());
         if(elem.expired()) continue;
         outputLazyChildren.emplace_back(elem.lock());
     }
@@ -269,7 +238,6 @@ void Vertex::removeFromForwardValidChildren(std::size_t vertexId) {
 std::vector<std::shared_ptr<Vertex> > Vertex::getForwardValidChildren() const {
     std::vector<std::shared_ptr<Vertex> > outputValidChildren;
     for(const auto & elem: forwardValidChildren_) {
-//        assert(!elem.expired());
         outputValidChildren.emplace_back(elem.lock());
     }
     return outputValidChildren;
@@ -311,7 +279,6 @@ void Vertex::removeFromReverseValidChildren(std::size_t vertexId) {
 std::vector<std::shared_ptr<Vertex> > Vertex::getReverseValidChildren() const {
     std::vector<std::shared_ptr<Vertex> > outputValidChildren;
     for(const auto & elem: reverseValidChildren_) {
-//        assert(!elem.expired());
         outputValidChildren.emplace_back(elem.lock());
     }
     return outputValidChildren;
@@ -351,14 +318,6 @@ bool Vertex::hasLazyChild(const std::shared_ptr<Vertex> & vertex) const{
 }
 
 
-//bool Vertex::isConsistent() const {
-//    if(category_[3] && optObjPtr_->isFinite(heuristicCost_forwardLazy_))
-//        return optObjPtr_->isCostEquivalentTo(heuristicCost_expandForwardLazy_, heuristicCost_forwardLazy_);
-//    else if(category_[0] && optObjPtr_->isFinite(heuristicCost_reverseLazy_))
-//        return optObjPtr_->isCostEquivalentTo(heuristicCost_expandReverseLazy_, heuristicCost_reverseLazy_);
-//    return false;
-//}
-
 bool Vertex::isConsistentInForwardLazySearch() const {
     return optObjPtr_->isCostEquivalentTo(heuristicCost_rhs_ForwardLazy_, heuristicCost_g_ForwardLazy_);
 }
@@ -367,17 +326,6 @@ bool Vertex::isConsistentInForwardLazySearch() const {
 bool Vertex::isConsistentInReverseLazySearch() const {
     return optObjPtr_->isCostEquivalentTo(heuristicCost_rhs_ReverseLazy_, heuristicCost_g_ReverseLazy_);
 }
-
-
-void Vertex::callOnValidChildrenBranch(const std::function<void(const std::shared_ptr<Vertex> &)> &function) {
-    // TODO: leave blank;
-}
-
-
-void Vertex::callOnLazyChildrenBranch(const std::function<void(const std::shared_ptr<Vertex> &)> &function) {
-    // TODO: leave blank;
-}
-
 
 
 /* ##########  ##########  ##########  ##########  ########## */

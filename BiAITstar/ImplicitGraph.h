@@ -72,8 +72,6 @@ namespace ompl::geometric::biait {
         // Get neighbors of a vertex;
         std::vector<std::shared_ptr<Vertex> > getNeighbors(const std::shared_ptr<Vertex> &vertex) const;
 
-//        std::vector<std::shared_ptr<Vertex> > getExpandRadiusNeighbors(const std::shared_ptr<Vertex> &vertex) const;
-
         bool isStart(const std::shared_ptr<Vertex> & vertex) const;
 
         bool isGoal(const std::shared_ptr<Vertex> & vertex) const;
@@ -93,10 +91,6 @@ namespace ompl::geometric::biait {
         std::size_t getNumberOfStateCollisionChecks() const { return numSampledStates_; }
 
         std::size_t getNumberOfNearestNeighborCalls() const { return numNearestNeighborsCalls_; }
-
-        void setBridgeSampleRate(const double bridgeSampleRate) { bridgeSampleRate_ = bridgeSampleRate; }
-
-        double getBridgeSampleRate() const { return bridgeSampleRate_; }
 
     private:
         /* ##########  ##########  ##########  ##########  ########## */
@@ -143,10 +137,6 @@ namespace ompl::geometric::biait {
         ompl::base::InformedSamplerPtr informedSamplerPtr_{};
 
         RNG rng_0_1_;
-
-        std::unique_ptr<ompl::base::BridgeTestValidStateSampler> bridgeTestValidStateSamplerPtr_;
-
-        double bridgeSampleRate_{0.0};
 
         // The implicit graph;
         ompl::NearestNeighborsGNATNoThreadSafety<std::shared_ptr<Vertex> > verticesGNAT_;

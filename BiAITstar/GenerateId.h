@@ -7,7 +7,6 @@
 
 #include <iostream>
 
-//#include <stdatomic.h>
 namespace ompl::geometric::biait {
     static std::size_t generateId() {
         static std::size_t id{0u};

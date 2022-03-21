@@ -6,7 +6,6 @@
 #define BIAIT_DEV_VERTEX_H
 
 #include "BiAITstar/GenerateId.h"
-#include "BiAITstar/Queuetypes.h"
 #include "BiAITstar/Edge.h"
 #include "WeakEdge.h"
 #include "BiAITstar/Utility.h"
@@ -35,8 +34,6 @@ namespace ompl::geometric::biait{
         Vertex(const base::SpaceInformationPtr & spaceInformationPtr,
                const base::ProblemDefinitionPtr & problemDefinitionPtr,
                const std::size_t & batchId);
-
-//        explicit Vertex(const std::shared_ptr<Vertex> & other);
 
         ~Vertex();
 
@@ -128,12 +125,6 @@ namespace ompl::geometric::biait{
         bool isConsistentInForwardLazySearch() const;
 
         bool isConsistentInReverseLazySearch() const;
-
-        // Recursively call it on all valid children on the branch;
-        void callOnValidChildrenBranch(const std::function<void(const std::shared_ptr<Vertex> &)> &function);
-
-        // Recursively call it on all lazy children on the branch;
-        void callOnLazyChildrenBranch(const std::function<void(const std::shared_ptr<Vertex> &)> &function);
 
 
         /* ##########  ##########  ##########  ##########  ########## */
@@ -310,7 +301,6 @@ namespace ompl::geometric::biait{
         std::bitset<5> category_{0b00000};
 
         // When isFrontLineVertex is true, parent_ become nullptr, otherwise frontLineParent_ is {nullptr, nullptr};
-//        FrontLineParent frontLineParent_;
 
         std::vector<std::weak_ptr<Vertex> > forwardValidChildren_{};
 

@@ -11,9 +11,7 @@
 #include <bitset>
 
 #include <ompl/base/Cost.h>
-
-#include "BiAITstar/Queuetypes.h"
-
+#include <ompl/datastructures/BinaryHeap.h>
 
 namespace ompl::geometric::biait {
 

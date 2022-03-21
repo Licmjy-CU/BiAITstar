@@ -33,8 +33,6 @@ namespace ompl::geometric::biait {
                  boost::math::constants::e<double>() / static_cast<double>(spaceInformationPtr_->getStateDimension()));
 
         updateStartAndGoalStates(ompl::base::plannerAlwaysTerminatingCondition(), plannerInputStatesPtr);
-
-        bridgeTestValidStateSamplerPtr_ = std::make_unique<ompl::base::BridgeTestValidStateSampler>(spaceInformationPtr.get());
     }
 
 
@@ -214,26 +212,13 @@ namespace ompl::geometric::biait {
         do {
             newSamples_.emplace_back(std::make_shared<Vertex>(spaceInformationPtr_, problemDefinitionPtr_, batchId_));
             do {
-                if(rng_0_1_.uniform01() < bridgeSampleRate_){
-                    std::shared_ptr<Vertex> newSample = std::make_shared<Vertex>(spaceInformationPtr_,
-                                                                                 problemDefinitionPtr_,
-                                                                                 batchId_);
-                    bridgeTestValidStateSamplerPtr_->sample(newSample->getState());
-                    if(canPossiblyImproveSolution(newSample)){
-                        spaceInformationPtr_->copyState(newSamples_.back()->getState(), newSample->getState());
-                    } else {
-                        informedSamplerPtr_->sampleUniform(newSamples_.back()->getState(), solutionCost_);
-                    }
-                } else {
-                    informedSamplerPtr_->sampleUniform(newSamples_.back()->getState(), solutionCost_);
-                }
+                informedSamplerPtr_->sampleUniform(newSamples_.back()->getState(), solutionCost_);
                 ++numSampledStates_;
             } while( !spaceInformationPtr_->getStateValidityChecker()->isValid(newSamples_.back()->getState()) );
             if(problemDefinitionPtr_->getGoal()->isSatisfied(newSamples_.back()->getState())){
                 goalVertices_.emplace_back(newSamples_.back());
                 newSamples_.back()->costToGoal_ = optObjPtr_->identityCost();
             }
-            //TODO: Left the state which located in the start region unprocessed;
             ++numValidSamples_;
         } while(newSamples_.size() < numNewSamples && !terminationCondition);
 
@@ -271,25 +256,7 @@ namespace ompl::geometric::biait {
     }
 
 
-//    std::vector<std::shared_ptr<Vertex> > ImplicitGraph::getExpandRadiusNeighbors(const std::shared_ptr<Vertex> &vertex) const {
-//        double factor{1.5};
-//        std::vector<std::shared_ptr<Vertex> > neighbors{};
-//        if(useKNearest_){
-//            verticesGNAT_.nearestK(vertex, static_cast<std::size_t>(static_cast<double>(numNeighbors_) * factor), neighbors);
-//        } else {
-//            verticesGNAT_.nearestR(vertex, radius_ * factor, neighbors);
-//        }
-//        vertex->cacheNeighbors(neighbors);
-//        return neighbors;
-//    }
-
-
     bool ImplicitGraph::isStart(const std::shared_ptr<Vertex> &vertex) const {
-//        for(const auto &elem: startVertices_){
-//            if(elem->getId() == vertex->getId()){
-//                return true;
-//            }
-//        }
         if( std::any_of(startVertices_.begin(), startVertices_.end(),
                         [&vertex](const std::shared_ptr<Vertex>& elem){ return elem->getId() == vertex->getId();} ) )
             return true;
@@ -376,7 +343,4 @@ namespace ompl::geometric::biait {
                 solutionCost_
                 );
     }
-
-
-
 }

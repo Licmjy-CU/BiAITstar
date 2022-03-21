@@ -56,7 +56,6 @@ ADD_LIBRARY(${PROJECT_NAME} SHARED
         BiAITstar/Edge.h
         BiAITstar/GenerateId.h
         BiAITstar/ImplicitGraph.h
-        BiAITstar/Queuetypes.h
         BiAITstar/Utility.h
         BiAITstar/Vertex.h
         BiAITstar/WeakEdge.h

@@ -7,7 +7,6 @@
 
 
 #include "BiAITstar/ImplicitGraph.h"
-#include "BiAITstar/Queuetypes.h"
 #include "BiAITstar/Vertex.h"
 #include "BiAITstar/Edge.h"
 

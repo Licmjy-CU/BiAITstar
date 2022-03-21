@@ -48,7 +48,6 @@ int main(int argc, char ** argv) {
     setup.setup();
 
     // If using the ompl::base::PlannerPtr, we can not use the visualPtr since it is non-virtual;
-    // ompl::base::PlannerPtr BiAITPtr = std::make_shared<ompl::geometric::BiAIT>(spaceInformationPtr);
     auto BiAITPtr = std::make_shared<ompl::geometric::BiAIT>(setup.getSpaceInformation());
     BiAITPtr->params().setParam("enable_early_truncate", std::to_string(0));
     BiAITPtr->params().setParam("batch_size", std::to_string(800));
@@ -58,7 +57,16 @@ int main(int argc, char ** argv) {
     setup.print();
 
     ompl::base::PlannerStatus isSolved = setup.solve(60.0);
-
-
+    if (isSolved)
+    {
+        // get the goal representation from the problem definition (not the same as the goal state)
+        // and inquire about the found path
+        ompl::base::PathPtr path = setup.getProblemDefinition()->getSolutionPath();
+        std::cout << "Found solution:" << std::endl;
+        // print the path to screen
+        path->print(std::cout);
+    }
+    else
+        std::cout << "No solution found" << std::endl;
     return 0;
 }

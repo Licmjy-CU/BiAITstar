@@ -30,11 +30,6 @@ namespace ompl::geometric {
         declareParam<bool>("enable_pruning", this, &BiAIT::setEnablePruning, &BiAIT::isPruningEnabled, "0,1");
         declareParam<std::size_t>("max_num_goals", this, &BiAIT::setMaxNumberOfGoals, &BiAIT::getMaxNumberOfGoals,
                                   "1:1:1000");
-        declareParam<bool>("enable_early_truncate", this, &BiAIT::setEnableEarlyTruncate, &BiAIT::isEarlyTruncateEnabled, "0,1");
-        declareParam<double>("bridge_sample_rate", this, &BiAIT::setBridgeSampleRate, &BiAIT::getBridgeSampleRate, "0:0.01:1");
-        declareParam<bool>("exponential_batch_size", this, &BiAIT::setEnableExponentialBatchSize,
-                           &BiAIT::isExponentialBatchSizeEnabled, "0,1");
-
 
         // Progress properties;
         addPlannerProgressProperty("iterations INTEGER", [this]() { return std::to_string(numIterations_); });
@@ -44,7 +39,6 @@ namespace ompl::geometric {
 
     void BiAIT::setup() {
         Planner::setup();
-
         if (static_cast<bool>(Planner::pdef_)) {
             if (!Planner::pdef_->hasOptimizationObjective()) {
                 OMPL_WARN("%s: No optimization objective has been specified. Defaulting to path length.",
@@ -63,12 +57,6 @@ namespace ompl::geometric {
             solutionCost_ = optObjPtr_->infiniteCost();
             motionValidatorPtr_ = spaceInformationPtr_->getMotionValidator();
             implicitGraph_.setup(spaceInformationPtr_, Planner::pdef_, &pis_);     // pis: PlannerInputState
-
-            // Lazy search early truncate
-            maxFLCost = optObjPtr_->infiniteCost();
-            maxRLCost = optObjPtr_->infiniteCost();
-
-//            implicitGraph_.setSampleDeterministic(batchSize_);
         } else {
             setup_ = false;
             OMPL_ERROR("Fail to setup");
@@ -87,8 +75,6 @@ namespace ompl::geometric {
         numIterations_ = 0u;
         numInconsistentOrUnconnectedTargetsInForward_ = 0u;
         numInconsistentOrUnconnectedTargetsInReverse_ = 0u;
-        maxFLCost = optObjPtr_->infiniteCost();
-        maxRLCost = optObjPtr_->infiniteCost();
         implicitGraph_.clear();
         Planner::clear();
         setup_ = false;
@@ -301,16 +287,6 @@ namespace ompl::geometric {
                 outgoingEdges.emplace_back(vertex, elem, 0b00001, computeEdgeKey(optObjPtr_, vertex, elem));
             }
         }
-//        // Handle the meet edge;
-//        if (vertex->isMeetVertex()) {
-//            if (vertex->getCategory() == 0b1000 && vertex->getFrontLineParent().parentToGoal.lock()) {
-//                const auto elem = vertex->getFrontLineParent().parentToGoal.lock();
-//                outgoingEdges.emplace_back(vertex, elem, 0b00100, computeEdgeKey(optObjPtr_, vertex, elem));
-//            } else if (vertex->getCategory() == 0b0010 && vertex->getFrontLineParent().parentToStart.lock()) {
-//                const auto elem = vertex->getFrontLineParent().parentToStart.lock();
-//                outgoingEdges.emplace_back(vertex, elem, 0b00100, computeEdgeKey(optObjPtr_, vertex, elem));
-//            }
-//        }
         return outgoingEdges;
     }
 
@@ -325,7 +301,6 @@ namespace ompl::geometric {
         // g_F(x_p)
         base::Cost edgeCostHeuristic = optObjPtr->motionCostHeuristic(parent->getState(),
                                                                       child->getState());
-//        std::cout << "[1]: " << parent->costToStart_.value() << "[2]: " << edgeCostHeuristic.value() << "[3]: " << child->heuristicCost_g_ReverseLazy_.value() << std::endl;
         return {
                 optObjPtr->combineCosts(
                         optObjPtr->combineCosts(parent->costToStart_, edgeCostHeuristic), child->heuristicCost_g_ReverseLazy_),
@@ -433,19 +408,13 @@ namespace ompl::geometric {
             if (isEdgeBetter(edge, (*iter_ForwardQueue)->data)) {
                 (*iter_ForwardQueue)->data.setEdgeKey(edge.getEdgeKey());
                 forwardValidQueue_.update(*iter_ForwardQueue);
-//                debugPrintDataInEdgeQueue(forwardValidQueue_, "IorO");
             }
         } else {
             // The edge is not in the queue;
-//            std::cout << "[ " << edge.getChild()->heuristicCost_g_ReverseLazy_ << " " << edge.getChild()->heuristicCost_rhs_ReverseLazy_ << " ]" << std::endl;
             auto elem = forwardValidQueue_.insert(edge);
-//            debugPrintDataInEdgeQueue(forwardValidQueue_, "INSERT");
             elem->data.getParent()->addToValidQueueOutgoingLookupFromStart(elem);
             elem->data.getChild()->addToValidQueueIncomingLookupFromStart(elem);
             // Increment the counter if the target is inconsistent;
-//            if (!edge.getChild()->isConsistentInForward() || !optObjPtr_->isFinite(edge.getChild()->heuristicCost_forwardLazy_)) {
-//                ++numInconsistentOrUnconnectedTargetsInForward_;
-//            }
             if (!edge.getChild()->isConsistentInReverseLazySearch() || !optObjPtr_->isFinite(edge.getChild()->heuristicCost_g_ReverseLazy_)) {
                 ++numInconsistentOrUnconnectedTargetsInReverse_;
             }
@@ -509,9 +478,6 @@ namespace ompl::geometric {
             if (!edge.getChild()->isConsistentInForwardLazySearch() || !optObjPtr_->isFinite(edge.getChild()->heuristicCost_g_ForwardLazy_)) {
                 ++numInconsistentOrUnconnectedTargetsInForward_;
             }
-//            if (!edge.getChild()->isConsistentInReverse() || !optObjPtr_->isFinite(edge.getChild()->heuristicCost_reverseLazy_)) {
-//                ++numInconsistentOrUnconnectedTargetsInReverse_;
-//            }
         }
     }
 
@@ -533,19 +499,10 @@ namespace ompl::geometric {
             // Insert it to the queue;
             const auto forwardVertexKey = computeForwardVertexKey(vertex);
             // This condition is for early truncation;
-            if(!isEarlyTruncateEnabled_){
-                std::pair<std::array<base::Cost, 2u>, std::shared_ptr<Vertex> > elemPair(forwardVertexKey,
-                                                                                         vertex);
-                vertex->setForwardLazyQueuePointer(forwardLazyQueue_.insert(elemPair));
-                vertex->setCategory(3, true);
-            } else if(optObjPtr_->isCostBetterThan(forwardVertexKey.at(1), maxFLCost)){
-                std::pair<std::array<base::Cost, 2u>, std::shared_ptr<Vertex> > elemPair(forwardVertexKey,
-                                                                                         vertex);
-                vertex->setForwardLazyQueuePointer(forwardLazyQueue_.insert(elemPair));
-                vertex->setCategory(3, true);
-            } else {
-                restoreVerticesInForwardLazyQueue();
-            }
+            std::pair<std::array<base::Cost, 2u>, std::shared_ptr<Vertex> > elemPair(forwardVertexKey,
+                                                                                     vertex);
+            vertex->setForwardLazyQueuePointer(forwardLazyQueue_.insert(elemPair));
+            vertex->setCategory(3, true);
         }
     }
 
@@ -560,37 +517,16 @@ namespace ompl::geometric {
             // Insert it to the queue;
             const auto reverseVertexKey = computeReverseVertexKey(vertex);
             // This condition is for early truncation;
-            if(!isEarlyTruncateEnabled_){
                 std::pair<std::array<base::Cost, 2u>, std::shared_ptr<Vertex> > elemPair(reverseVertexKey,
                                                                                          vertex);
                 vertex->setReverseLazyQueuePointer(reverseLazyQueue_.insert(elemPair));
                 vertex->setCategory(0, true);
-            } else if(optObjPtr_->isCostBetterThan(reverseVertexKey.at(1), maxRLCost)){
-                std::pair<std::array<base::Cost, 2u>, std::shared_ptr<Vertex> > elemPair(reverseVertexKey,
-                                                                                         vertex);
-                vertex->setReverseLazyQueuePointer(reverseLazyQueue_.insert(elemPair));
-                vertex->setCategory(0, true);
-            } else {
-                restoreVerticesInReverseLazyQueue();
-            }
         }
     }
 
 
     void BiAIT::insertOrUpdateMeetLazyQueue(const std::weak_ptr<Vertex> & parent, const std::weak_ptr<Vertex> & child){
-//        if(!DebugBiAIT::traceGoal(implicitGraph_, child.lock())){
-//            std::cout << "traceGoal: " << DebugBiAIT::traceGoal(implicitGraph_, child.lock()) << std::endl;
-//        }
-//        if(!DebugBiAIT::traceStart(implicitGraph_,parent.lock())){
-//            std::cout << "traceStart: " << DebugBiAIT::traceStart(implicitGraph_,parent.lock()) << std::endl;
-//        }
-//        rebuildForwardValidQueue();
-//        rebuildReverseValidQueue();
-//        DebugBiAIT::printDataInEdgeQueue(forwardValidQueue_, "FVQ: ");
-//        DebugBiAIT::printDataInEdgeQueue(reverseValidQueue_, "RVQ: ");
-
-        // Maybe not efficiency but this is the most cheap way to implement;
-        // TODO: Using the findInMeetLazyQueue to update this part;
+        // Maybe not efficiency but this is the cheap-est way to implement;
         WeakEdge edge{parent, child, computeMeetLazyKey(parent.lock(), child.lock())};
 
         if(auto queueElemPointer = findInMeetLazyQueue(edge)){
@@ -610,12 +546,10 @@ namespace ompl::geometric {
 
     bool BiAIT::iterate(const base::PlannerTerminationCondition &terminationCondition) {
         ++numIterations_;
-//        informRunTimeStatus(std::cout);
         bool performFL{performForwardLazySearch()};
         bool performFV{performForwardValidSearch()};
         bool performRL{performReverseLazySearch()};
         bool performRV{performReverseValidSearch()};
-//        std::cout << numIterations_ << " : " << performFL << " " << performFV << " " << performRL << " " << performRV << std::endl;
         if(performFL || performFV || performRL || performRV){
             if((performFL && !performFV) || (performRL && !performRV)){
                 if(performFL && numIterations_ % 2 == 1){
@@ -636,9 +570,6 @@ namespace ompl::geometric {
             }
         } else {
             // Sample a new batch of samples;
-            if(enabledExponentialBatchSize_){
-                batchSize_ = batchSize_ * 2;
-            }
             if(implicitGraph_.addSamples(batchSize_, terminationCondition)){
                 if(isPruningEnabled_){
                     removeFromMeetValidQueue(implicitGraph_.prune());
@@ -652,15 +583,13 @@ namespace ompl::geometric {
                 invalidateAllLazyComponent();
                 clearLazyQueue();
                 clearValidQueue();
-//                insertStartVerticesIntoForwardLazyQueue();
-//                insertGoalVerticesIntoReverseLazyQueue();
                 insertValidTreeIntoLazyQueue();
                 expandStartVerticesIntoForwardValidQueue();
                 expandGoalVerticesIntoReverseValidQueue();
 
-//                DebugBiAIT::modifyVertex(meetLazyEdgeQueue_, "AddSample ");
             } else {
                 // Wrong sample added;
+                // May caused by the memory overflow;
                 OMPL_ERROR("Wrong Samples added, stop iteration");
                 return false;
             }
@@ -691,9 +620,6 @@ namespace ompl::geometric {
                 solution.setOptimized(optObjPtr_, solutionCost_, optObjPtr_->isSatisfied(solutionCost_));
                 pdef_->addSolutionPath(solution);
                 informNewSolution();
-                // Update the early truncate condition `maxFLCost` and `maxRLCost`;
-                maxFLCost = meetValidEdgeQueue_.top()->data.second.getChild()->costToStart_;
-                maxRLCost = meetValidEdgeQueue_.top()->data.second.getParent()->costToGoal_;
             } else {
                 return;
             }
@@ -741,36 +667,6 @@ namespace ompl::geometric {
                 "\t \tProcessed edges: [ %u ]; Collision free edges: [ %u ] (%.1f); "
                 "\t \tFV, FL, RV, RL branch sizes: [ %zu ] [ %zu ] [ %zu ] [ %zu ]; "
                 "\t \tFV, FL, RV, RL queue sizes: [ %zu ] [ %zu ] [ %zu ] [ %zu ]; "
-                "\n \n",
-                name_.c_str(), numIterations_, implicitGraph_.getBatchId(), implicitGraph_.getNumberOfSampledStates(),
-                implicitGraph_.getNumberOfValidSamples(),
-                implicitGraph_.getNumberOfSampledStates() == 0u ?
-                0.0 :
-                100.0 * (static_cast<double>(implicitGraph_.getNumberOfValidSamples()) /
-                         static_cast<double>(implicitGraph_.getNumberOfSampledStates())),
-                meetLazyEdgeQueue_.size(),
-                numProcessedEdges_, numEdgeCollisionChecks_,
-                numProcessedEdges_ == 0u ?
-                0.0 :
-                100.0 * (static_cast<float>(numEdgeCollisionChecks_) / static_cast<float>(numProcessedEdges_)),
-                countNumVerticesInForwardValidPortion(),
-                countNumVerticesInForwardLazyPortion(),
-                countNumVerticesInReverseValidPortion(),
-                countNumVerticesInReverseLazyPortion(),
-                forwardValidQueue_.size(),
-                forwardLazyQueue_.size(),
-                reverseValidQueue_.size(),
-                reverseLazyQueue_.size()
-        );
-    }
-
-
-    void BiAIT::informRunTimeStatus(std::ostream & os) const{
-        printf(
-                "Run Time Info: \t[ %s ]\t Iteration: [ %zu ]; \t BatchId: [ %zu ]; \t Sampled states [ %lu ]; \t Valid samples: [ %zu ] (%.1f); \t MeetLazyEdgeQueue.size(): [ %u ]\n"
-                "\t \tProcessed edges: [ %lu ]; Collision free edges: [ %lu ] (%.1f); "
-                "\t \tFV, FL, RV, RL branch sizes: [ %zu ] [ %zu ] [ %zu ] [ %zu ]; "
-                "\t \tFV, FL, RV, RL queue sizes: [ %u ] [ %u ] [ %u ] [ %u ]; "
                 "\n \n",
                 name_.c_str(), numIterations_, implicitGraph_.getBatchId(), implicitGraph_.getNumberOfSampledStates(),
                 implicitGraph_.getNumberOfValidSamples(),
@@ -890,6 +786,7 @@ namespace ompl::geometric {
                 currentVertexToStart = currentVertexToStart->getForwardValidParent();
             } while (!implicitGraph_.isStart(currentVertexToStart));
             // Emplace the reverse vector to the path with the reverse iterator;
+            path->append(implicitGraph_.getStartVertices().at(0)->getState());
             for (auto crIter = invertedPathToStart.crbegin(); crIter != invertedPathToStart.crend(); ++crIter) {
                 path->append((*crIter)->getState());            // (*crIter) is shared_ptr;
             }
@@ -900,6 +797,7 @@ namespace ompl::geometric {
                 path->append(currentVertexToGoal->getState());
                 currentVertexToGoal = currentVertexToGoal->getReverseValidParent();
             } while (!implicitGraph_.isGoal(currentVertexToGoal));
+            path->append(implicitGraph_.getGoalVertices().at(0)->getState());
             return path;
         } else {
             return nullptr;
@@ -917,11 +815,9 @@ namespace ompl::geometric {
 
 
     bool BiAIT::isVertexBetter(const KeyVertexPair &lhs, const KeyVertexPair &rhs) const {
-        // TODO: Debug for this function; suppose there are bugs;
         // Vertex queuing method is directly transferred from the one in AIT_star, but modified to root;
         // If the costs of two vertices are equal then we prioritize inconsistent vertices that are targets of
         // edges in the forward queue;
-
         if (optObjPtr_->isCostEquivalentTo(lhs.first[0u], rhs.first[0u]) &&
             optObjPtr_->isCostEquivalentTo(lhs.first[1u], rhs.first[1u])) {
             const std::vector<ompl::BinaryHeap<ompl::geometric::biait::Edge, std::function<bool(const Edge &, const Edge &)>>::Element *> * queueTypePtr{nullptr};
@@ -1001,45 +897,6 @@ namespace ompl::geometric {
             }
         }
     }
-
-
-    void BiAIT::updateCostToGoalOfRVPredecessor(const std::shared_ptr<Vertex> & vertex) const{
-
-    }
-
-
-//    void BiAIT::updateCostOfValidBranch(const std::shared_ptr<Vertex> &vertex) const {
-//        // Update the cost of valid children recursively;
-//        // Deprecated: Only use this function when you do not understand which branch the vertex is in;
-//        if (vertex->getCategory()[4])
-//            updateCostToStartOfForwardValidDescendant(vertex);
-//        else if (vertex->getCategory()[1])
-//            updateCostToGoalOfReverseValidDescendant(vertex);
-//    }
-
-
-//    void BiAIT::updateCostOfLazyBranch(const std::shared_ptr<Vertex> &vertex) const {
-//        // Deprecated: did not handle the meetLazyEdges, may cause logic error;
-//        if (vertex->getCategory()[3])
-//            for (const auto &elem: vertex->getForwardLazyChildren()){
-//                // TODO: If meetVertex in lazy branch;
-//                elem->heuristicCost_rhs_ForwardLazy_ = optObjPtr_->combineCosts(
-//                        optObjPtr_->betterCost(elem->heuristicCost_g_ForwardLazy_,
-//                                                  elem->heuristicCost_rhs_ForwardLazy_),
-//                        optObjPtr_->motionCostHeuristic(vertex->getState(), elem->getState())
-//                );
-//                updateCostOfLazyBranch(elem);
-//            }
-//        else if(vertex->getCategory()[0])
-//            for(const auto &elem: vertex->getReverseLazyChildren()){
-//                elem->heuristicCost_rhs_ReverseLazy_ = optObjPtr_->combineCosts(
-//                        optObjPtr_->betterCost(elem->heuristicCost_g_ReverseLazy_,
-//                                               elem->heuristicCost_rhs_ReverseLazy_),
-//                        optObjPtr_->motionCostHeuristic(vertex->getState(), elem->getState())
-//                );
-//                updateCostOfLazyBranch(elem);
-//            }
-//    }
 
 
     void BiAIT::insertOrUpdateMeetValidEdge(Edge & selectedValidEdge, const base::Cost & edgeCost) {
@@ -1129,15 +986,6 @@ namespace ompl::geometric {
     // Functions called in function `iterate()`;
     /* ##########  ##########  ##########  ##########  ########## */
 
-    bool BiAIT::performLazySearch() {
-        // We follow the conventions in AIT_star;
-        // Stop searching when any queue is empty;
-        if(( forwardLazyQueue_.empty() && reverseLazyQueue_.empty() ) || forwardValidQueue_.empty() || reverseValidQueue_.empty())
-            return false;
-        return true;
-    }
-
-
     bool BiAIT::performForwardLazySearch() {
 
         if(forwardLazyQueue_.empty() || forwardValidQueue_.empty() || reverseValidQueue_.empty()) return false;
@@ -1145,43 +993,10 @@ namespace ompl::geometric {
                                                              reverseValidQueue_.top()->data.getEdgeKey()[0u]) ?
                                 forwardValidQueue_.top()->data: reverseValidQueue_.top()->data;
         const auto & bestVertex = forwardLazyQueue_.top()->data;
-//        std::cout << "bestEdge: " << bestEdge.getEdgeKey()[0u].value() << "  bestVertex: "<< bestVertex.first[0u].value() << std::endl;
         return !((bestEdge.getChild()->isConsistentInForwardLazySearch() &&
                   optObjPtr_->isCostBetterThan(bestEdge.getEdgeKey()[0u], bestVertex.first[0u])) ||
                  numInconsistentOrUnconnectedTargetsInForward_ == 0u);
     }
-
-//    bool BiAIT::performForwardLazySearch() {
-//        bool output;
-//        std::string reason{};
-//        if(forwardLazyQueue_.empty()) {
-//            reason += "FL_empty__";
-//        }
-//        if(reverseValidQueue_.empty()) {
-//            reason += "RV_empty__";
-//        }
-//        if(forwardLazyQueue_.empty() || reverseValidQueue_.empty()) {
-//            std::cout << reason << std::endl;
-//            return false;
-//        }
-//        const auto & bestEdge = reverseValidQueue_.top()->data;
-//        const auto & bestVertex = forwardLazyQueue_.top()->data;
-//        if(bestEdge.getChild()->isConsistentInForwardLazySearch()) {
-//            reason += "In_consi__";
-//        }
-//        if( optObjPtr_->isCostBetterThan(bestEdge.getEdgeKey()[0u], bestVertex.first[0u])){
-//            reason += "betterKe__" + std::to_string(bestEdge.getEdgeKey()[0u].value()) + "_" + std::to_string(bestVertex.first[0u].value()) + "__";
-//
-//        }
-//        if(numInconsistentOrUnconnectedTargetsInForward_ == 0u){
-//            reason += "0_incons";
-//        }
-//        std::cout << reason << std::endl;
-//        return !((bestEdge.getChild()->isConsistentInForwardLazySearch() &&
-//                  optObjPtr_->isCostBetterThan(bestEdge.getEdgeKey()[0u], bestVertex.first[0u])) ||
-//                 numInconsistentOrUnconnectedTargetsInForward_ == 0u);
-//    }
-
 
 
     bool BiAIT::performReverseLazySearch() {
@@ -1189,10 +1004,7 @@ namespace ompl::geometric {
         const auto & bestEdge = optObjPtr_->isCostBetterThan(forwardValidQueue_.top()->data.getEdgeKey()[0u],
                                                              reverseValidQueue_.top()->data.getEdgeKey()[0u]) ?
                                 forwardValidQueue_.top()->data: reverseValidQueue_.top()->data;
-//        const auto & bestEdge = forwardValidQueue_.top()->data;
         const auto & bestVertex = reverseLazyQueue_.top()->data;
-//        std::string reason = "RL__" + std::to_string(bestEdge.getEdgeKey()[0u].value()) + "_" + std::to_string(bestVertex.first[0u].value());
-//        std::cout << reason << std::endl;
         return !((bestEdge.getChild()->isConsistentInReverseLazySearch() &&
                   optObjPtr_->isCostBetterThan(bestEdge.getEdgeKey()[0u], bestVertex.first[0u])) ||
                  numInconsistentOrUnconnectedTargetsInReverse_ == 0u);
@@ -1205,13 +1017,7 @@ namespace ompl::geometric {
         // If the best edge in the forward valid queue has a potential total solution cost of infinity, the forward
         // valid search does not need to be continued. This can happen if the lazy search did not reach each other;
         base::Cost bestEdgeCost = optObjPtr_->infiniteCost();
-//        if(reverseValidQueue_.empty())
-            bestEdgeCost = forwardValidQueue_.top()->data.getEdgeKey()[0u];
-//        else
-//            bestEdgeCost = optObjPtr_->isCostBetterThan(forwardValidQueue_.top()->data.getEdgeKey()[0u],
-//                                                        reverseValidQueue_.top()->data.getEdgeKey()[0u]) ?
-//                           forwardValidQueue_.top()->data.getEdgeKey()[0u]: reverseValidQueue_.top()->data.getEdgeKey()[0u];
-//        std::cout << "FVkey: " << bestEdgeCost.value() << "  SolCost: "<< solutionCost_.value() << std::endl;
+        bestEdgeCost = forwardValidQueue_.top()->data.getEdgeKey()[0u];
         if(!optObjPtr_->isFinite(bestEdgeCost))
             return false;
         return optObjPtr_->isCostBetterThan(bestEdgeCost, solutionCost_);
@@ -1224,12 +1030,7 @@ namespace ompl::geometric {
         // If the best edge in the reverse valid queue has a potential total solution cost of infinity, the reverse
         // valid search does not need to be continued. This can happen if the lazy search did not reach each other;
         base::Cost bestEdgeCost = optObjPtr_->infiniteCost();
-//        if(forwardValidQueue_.empty())
-            bestEdgeCost = reverseValidQueue_.top()->data.getEdgeKey()[0u];
-//        else
-//            bestEdgeCost = optObjPtr_->isCostBetterThan(forwardValidQueue_.top()->data.getEdgeKey()[0u],
-//                                                        reverseValidQueue_.top()->data.getEdgeKey()[0u]) ?
-//                           forwardValidQueue_.top()->data.getEdgeKey()[0u]: reverseValidQueue_.top()->data.getEdgeKey()[0u];
+        bestEdgeCost = reverseValidQueue_.top()->data.getEdgeKey()[0u];
         if(!optObjPtr_->isFinite(bestEdgeCost))
             return false;
         return optObjPtr_->isCostBetterThan(bestEdgeCost, solutionCost_);
@@ -1256,8 +1057,6 @@ namespace ompl::geometric {
         }
 
         if(vertex->isConsistentInForwardLazySearch()) return;
-//        assert(!vertex->isConsistentInForwardLazySearch());         // The open queue should not contain consistent vertices;
-//        assertInconsistentInForwardLazy(vertex);
         // Check if the vertex is under consistent (rhs[s] < g[s]);
         if(optObjPtr_->isCostBetterThan(vertex->heuristicCost_rhs_ForwardLazy_, vertex->heuristicCost_g_ForwardLazy_) ||
            optObjPtr_->isCostEquivalentTo(vertex->heuristicCost_rhs_ForwardLazy_, vertex->heuristicCost_g_ForwardLazy_)) {
@@ -1296,8 +1095,6 @@ namespace ompl::geometric {
         }
 
         if(vertex->isConsistentInReverseLazySearch()) return;
-//        assert(!vertex->isConsistentInReverseLazySearch());         // The open queue should not contain consistent vertices;
-//        assertInconsistentInReverseLazy(vertex);
         // Check if the vertex is under consistent (g[s] < v[s])
         if(optObjPtr_->isCostBetterThan(vertex->heuristicCost_rhs_ReverseLazy_, vertex->heuristicCost_g_ReverseLazy_) ||
            optObjPtr_->isCostEquivalentTo(vertex->heuristicCost_rhs_ReverseLazy_, vertex->heuristicCost_g_ReverseLazy_)) {
@@ -1356,7 +1153,6 @@ namespace ompl::geometric {
 
                     if(!child->meetLazyEdgeQueuePointer_.empty()){ // Child must be the parent of the meetLazyEdge;
                         auto tempVector = child->meetLazyEdgeQueuePointer_;
-//                        DebugBiAIT::modifyVertex(child->meetLazyEdgeQueuePointer_, "FV1 ");
                         for(const auto & elem: tempVector){
                             checkMeetLazyEdgeToValid(elem);
                         }
@@ -1426,7 +1222,6 @@ namespace ompl::geometric {
 
                     if(!child->meetLazyEdgeQueuePointer_.empty()){ // Child must be the parent of the meetLazyEdge;
                         auto tempVector = child->meetLazyEdgeQueuePointer_;
-//                        DebugBiAIT::modifyVertex(child->meetLazyEdgeQueuePointer_, "RV1 ");
                         for(const auto & elem: tempVector){
                             checkMeetLazyEdgeToValid(elem);
                         }
@@ -1480,40 +1275,6 @@ namespace ompl::geometric {
     }
 
 
-    void BiAIT::restoreVerticesInForwardLazyQueue() {
-        std::vector<KeyVertexPair> forwardLazyQueue;
-        forwardLazyQueue_.getContent(forwardLazyQueue);
-        for(const auto & elem: forwardLazyQueue) {
-            if(!elem.second->meetLazyEdgeQueuePointer_.empty() || elem.second->getCategory()[4]){
-                elem.second->resetForwardLazyQueuePointer();
-                continue;
-            }
-            elem.second->setCategory(3, false);
-            elem.second->heuristicCost_g_ForwardLazy_ = optObjPtr_->infiniteCost();
-            elem.second->heuristicCost_rhs_ForwardLazy_ = optObjPtr_->infiniteCost();
-            elem.second->resetForwardLazyQueuePointer();
-        }
-        forwardLazyQueue_.clear();
-    }
-
-
-    void BiAIT::restoreVerticesInReverseLazyQueue() {
-        std::vector<KeyVertexPair> reverseLazyQueue;
-        reverseLazyQueue_.getContent(reverseLazyQueue);
-        for(const auto & elem: reverseLazyQueue) {
-            if(!elem.second->meetLazyEdgeQueuePointer_.empty() || elem.second->getCategory()[1]){
-                elem.second->resetReverseLazyQueuePointer();
-                continue;
-            }
-            elem.second->setCategory(0, false);
-            elem.second->heuristicCost_g_ReverseLazy_ = optObjPtr_->infiniteCost();
-            elem.second->heuristicCost_rhs_ReverseLazy_ = optObjPtr_->infiniteCost();
-            elem.second->resetReverseLazyQueuePointer();
-        }
-        reverseLazyQueue_.clear();
-    }
-
-
     void BiAIT::clearValidQueue() {
         clearForwardValidQueue();
         clearReverseValidQueue();
@@ -1556,47 +1317,45 @@ namespace ompl::geometric {
 
 
     void BiAIT::invalidateForwardLazyBranch(const std::shared_ptr<Vertex> &vertex) {
-//        if(vertex->getCategory()[4]) return;
-//        DebugBiAIT::modifyVertex(vertex->meetLazyEdgeQueuePointer_, "FL1 ");
-            if(!vertex->meetLazyEdgeQueuePointer_.empty()){
-                for(const auto& meetEdge : vertex->meetLazyEdgeQueuePointer_){
-                    if(meetEdge == nullptr || !meetEdge->data.getParent().lock() || !meetEdge->data.getChild().lock()){
-                        if(meetEdge != nullptr && meetEdge->data.getChild().lock()){
-                            Utility::removeFromVectorByValue(meetEdge->data.getChild().lock()->meetLazyEdgeQueuePointer_, meetEdge);
-                        }
-                        meetLazyEdgeQueue_.remove(meetEdge);
-                        continue;
-                    }
-                    Utility::removeFromVectorByValue(meetEdge->data.getChild().lock()->meetLazyEdgeQueuePointer_, meetEdge);
-                    if(optObjPtr_->isCostEquivalentTo(
-                            meetEdge->data.getChild().lock()->heuristicCost_g_ForwardLazy_,
-                            optObjPtr_->combineCosts(meetEdge->data.getParent().lock()->heuristicCost_g_ForwardLazy_,
-                                                     optObjPtr_->motionCostHeuristic(meetEdge->data.getParent().lock()->getState(),
-                                                                                     meetEdge->data.getChild().lock()->getState())))) {
-                        invalidateRLWhenInvalidatingFL(meetEdge->data.getChild().lock(), nullptr);
+        if(!vertex->meetLazyEdgeQueuePointer_.empty()){
+            for(const auto& meetEdge : vertex->meetLazyEdgeQueuePointer_){
+                if(meetEdge == nullptr || !meetEdge->data.getParent().lock() || !meetEdge->data.getChild().lock()){
+                    if(meetEdge != nullptr && meetEdge->data.getChild().lock()){
+                        Utility::removeFromVectorByValue(meetEdge->data.getChild().lock()->meetLazyEdgeQueuePointer_, meetEdge);
                     }
                     meetLazyEdgeQueue_.remove(meetEdge);
+                    continue;
                 }
-                vertex->meetLazyEdgeQueuePointer_.clear();
+                Utility::removeFromVectorByValue(meetEdge->data.getChild().lock()->meetLazyEdgeQueuePointer_, meetEdge);
+                if(optObjPtr_->isCostEquivalentTo(
+                        meetEdge->data.getChild().lock()->heuristicCost_g_ForwardLazy_,
+                        optObjPtr_->combineCosts(meetEdge->data.getParent().lock()->heuristicCost_g_ForwardLazy_,
+                                                 optObjPtr_->motionCostHeuristic(meetEdge->data.getParent().lock()->getState(),
+                                                                                 meetEdge->data.getChild().lock()->getState())))) {
+                    invalidateRLWhenInvalidatingFL(meetEdge->data.getChild().lock(), nullptr);
+                }
+                meetLazyEdgeQueue_.remove(meetEdge);
             }
-            // If this vertex is consistent before invalidation, then all incoming edges now have targets that are
-            // inconsistent;
-            if (vertex->isConsistentInForwardLazySearch()) {
-                numInconsistentOrUnconnectedTargetsInForward_ += vertex->validQueueIncomingLookupFromGoal_.size();
-            }
-            // Reset the cost to come from the start and the forward lazy children unless the vertex is itself a goal;
-            if (!implicitGraph_.isStart(vertex)) {
-                // Reset the parent;
-                vertex->heuristicCost_rhs_ForwardLazy_ = optObjPtr_->infiniteCost();
-            }
-            vertex->heuristicCost_g_ForwardLazy_ = optObjPtr_->infiniteCost();
-            vertex->heuristicCost_g_ReverseLazy_ = optObjPtr_->infiniteCost();
-            vertex->heuristicCost_rhs_ReverseLazy_ = optObjPtr_->infiniteCost();
-            // Update all related edges in the forward valid queue;
-            for(const auto & elem: vertex->validQueueIncomingLookupFromStart_){
-                elem->data.setEdgeKey(computeForwardEdgeKey(optObjPtr_, elem->data.getParent(), elem->data.getChild()));
-                forwardValidQueue_.update(elem);
-            }
+            vertex->meetLazyEdgeQueuePointer_.clear();
+        }
+        // If this vertex is consistent before invalidation, then all incoming edges now have targets that are
+        // inconsistent;
+        if (vertex->isConsistentInForwardLazySearch()) {
+            numInconsistentOrUnconnectedTargetsInForward_ += vertex->validQueueIncomingLookupFromGoal_.size();
+        }
+        // Reset the cost to come from the start and the forward lazy children unless the vertex is itself a goal;
+        if (!implicitGraph_.isStart(vertex)) {
+            // Reset the parent;
+            vertex->heuristicCost_rhs_ForwardLazy_ = optObjPtr_->infiniteCost();
+        }
+        vertex->heuristicCost_g_ForwardLazy_ = optObjPtr_->infiniteCost();
+        vertex->heuristicCost_g_ReverseLazy_ = optObjPtr_->infiniteCost();
+        vertex->heuristicCost_rhs_ReverseLazy_ = optObjPtr_->infiniteCost();
+        // Update all related edges in the forward valid queue;
+        for(const auto & elem: vertex->validQueueIncomingLookupFromStart_){
+            elem->data.setEdgeKey(computeForwardEdgeKey(optObjPtr_, elem->data.getParent(), elem->data.getChild()));
+            forwardValidQueue_.update(elem);
+        }
         // Update all related edges in the reverse valid queue;
         for(const auto & elem: vertex->validQueueIncomingLookupFromGoal_) {
             elem->data.setEdgeKey(computeReverseEdgeKey(optObjPtr_, elem->data.getParent(), elem->data.getChild()));
@@ -1620,7 +1379,6 @@ namespace ompl::geometric {
         }
 
         // Update the forward lazy search vertex to ensure that this vertex is placed in V_open if necessary;
-//        updateVertexInFLSearch(vertex);
         updateValidQueueIfVertexInside(vertex);
     }
 
@@ -1628,7 +1386,6 @@ namespace ompl::geometric {
     void BiAIT::invalidateRLWhenInvalidatingFL(const std::shared_ptr<Vertex> &vertex, const std::shared_ptr<Vertex> &propagateFrom) {
         base::Cost bestHeuristic = optObjPtr_->infiniteCost();
         for(const auto & child: vertex->getReverseLazyChildren()){
-//            if(!child->isConsistentInForwardLazySearch() || (propagateFrom != nullptr && child->getId() == propagateFrom->getId())) continue;
             if(propagateFrom != nullptr && child->getId() == propagateFrom->getId()) continue;
             base::Cost candidateHeuristic = optObjPtr_->combineCosts( child->heuristicCost_g_ForwardLazy_,
                                                                       optObjPtr_->motionCostHeuristic(child->getState(), vertex->getState()));
@@ -1656,7 +1413,6 @@ namespace ompl::geometric {
         // This function is same as `invalidateFLWhenInvalidatingRL`;
         base::Cost bestHeuristic = optObjPtr_->infiniteCost();
         for(const auto & child: vertex->getForwardLazyChildren()){
-//            if(!child->isConsistentInReverseLazySearch() || (propagateFrom != nullptr && child->getId() == propagateFrom->getId())) continue;
             if(propagateFrom != nullptr && child->getId() == propagateFrom->getId()) continue;
             base::Cost candidateHeuristic = optObjPtr_->combineCosts( child->heuristicCost_g_ReverseLazy_,
                                                                       optObjPtr_->motionCostHeuristic(child->getState(), vertex->getState()));
@@ -1680,7 +1436,6 @@ namespace ompl::geometric {
 
 
     void BiAIT::invalidateReverseLazyBranch(const std::shared_ptr<Vertex> &vertex) {
-//        if(vertex->getCategory()[1]) return;
         if(!vertex->meetLazyEdgeQueuePointer_.empty()){
             for(const auto & meetEdge : vertex->meetLazyEdgeQueuePointer_) {
                 if(meetEdge == nullptr || !meetEdge->data.getParent().lock() || !meetEdge->data.getChild().lock()) {
@@ -1744,8 +1499,6 @@ namespace ompl::geometric {
             invalidateReverseLazyBranch(elem);
         }
         // Update the forward lazy search vertex to ensure that this vertex is placed in V_open if necessary;
-//        updateVertexInRLSearch(vertex);
-
         updateValidQueueIfVertexInside(vertex);
     }
 
@@ -1754,7 +1507,6 @@ namespace ompl::geometric {
                                                const std::shared_ptr<Vertex> &propagateFrom) {
         base::Cost bestHeuristic = optObjPtr_->infiniteCost();
         for(const auto & child: vertex->getForwardLazyChildren()){
-//            if(!child->isConsistentInReverseLazySearch() || (propagateFrom != nullptr && child->getId() == propagateFrom->getId())) continue;
             if(propagateFrom != nullptr && child->getId() == propagateFrom->getId()) continue;
             base::Cost candidateHeuristic = optObjPtr_->combineCosts( child->heuristicCost_g_ReverseLazy_,
                                                                       optObjPtr_->motionCostHeuristic(child->getState(), vertex->getState()));
@@ -1782,7 +1534,6 @@ namespace ompl::geometric {
         // This function is same as `invalidateRLWhenInvalidatingFL`;
         base::Cost bestHeuristic = optObjPtr_->infiniteCost();
         for(const auto & child: vertex->getReverseLazyChildren()){
-//            if(!child->isConsistentInForwardLazySearch() || (propagateFrom != nullptr && child->getId() == propagateFrom->getId())) continue;
             if(propagateFrom != nullptr && child->getId() == propagateFrom->getId()) continue;
             base::Cost candidateHeuristic = optObjPtr_->combineCosts( child->heuristicCost_g_ForwardLazy_,
                                                                       optObjPtr_->motionCostHeuristic(child->getState(), vertex->getState()));
@@ -1813,14 +1564,6 @@ namespace ompl::geometric {
             vertex->resetForwardLazyChildren();
             vertex->resetReverseLazyParent();
             vertex->resetReverseLazyChildren();
-//            if(!implicitGraph_.isGoal(vertex) && vertex->hasReverseLazyParent()) {
-//                vertex->getReverseLazyParent()->removeFromReverseLazyChildren(vertex->getId());
-//                vertex->resetReverseLazyParent();
-//            }
-//            if(!implicitGraph_.isStart(vertex) && vertex->hasForwardLazyParent()) {
-//                vertex->getForwardLazyParent()->removeFromForwardLazyChildren(vertex->getId());
-//                vertex->resetForwardLazyParent();
-//            }
             vertex->resetForwardLazyQueuePointer();
             vertex->resetReverseLazyQueuePointer();
             vertex->meetLazyEdgeQueuePointer_.clear();
@@ -1845,8 +1588,6 @@ namespace ompl::geometric {
     void BiAIT::updateVertexInFLSearchToFLTree(const std::shared_ptr<Vertex> &vertex) {
         // Get the best parent for this vertex;
         auto bestParent = vertex->getForwardLazyParent();
-//        auto bestCost = vertex->hasForwardLazyParent() ? vertex->heuristicCost_g_ForwardLazy_
-//                                                       : optObjPtr_->infiniteCost();
         auto bestCost = optObjPtr_->infiniteCost();
 
         updateVertexInFLSearch_bestParent(vertex, bestParent, bestCost);
@@ -1854,7 +1595,6 @@ namespace ompl::geometric {
         vertex->heuristicCost_rhs_ForwardLazy_ = bestCost;
 
         if(optObjPtr_->isFinite(bestCost)) {
-//            std::cout << "bestParent: " << bestParent->getCategory() << "\tisLeafNode: " << !vertex->hasReverseLazyChild() << std::endl;
             // The vertex is connected; then update the forward lazy parent;
             vertex->setForwardLazyParent(bestParent);
             bestParent->addToForwardLazyChildren(vertex);
@@ -2055,8 +1795,6 @@ namespace ompl::geometric {
         // Get the best parent for this vertex;
         auto bestParent = vertex->getReverseLazyParent();
         auto bestCost = optObjPtr_->infiniteCost();
-//        auto bestCost = vertex->hasReverseLazyParent() ? vertex->heuristicCost_g_ReverseLazy_
-//                                                       : optObjPtr_->infiniteCost();
         updateVertexInRLSearch_bestParent(vertex, bestParent, bestCost);
         // Set the best cost as the cost-to-come from start;
         vertex->heuristicCost_rhs_ReverseLazy_ = bestCost;
@@ -2065,8 +1803,6 @@ namespace ompl::geometric {
             // The vertex is connected; then update the reverse lazy parent;
             vertex->setReverseLazyParent(bestParent);
             bestParent->addToReverseLazyChildren(vertex);
-//            if(!DebugBiAIT::traceGoal(implicitGraph_, vertex))
-//                std::cout << DebugBiAIT::traceGoal(implicitGraph_, vertex) << std::endl;
         } else {
             // The vertex is orphaned, currently; reset the reverse lazy parent if there is one;
             if(vertex->hasReverseLazyParent()) {
@@ -2467,45 +2203,12 @@ namespace ompl::geometric {
     }
 
 
-    void BiAIT::rebuildForwardValidQueue() {
-        std::vector<Edge> edges{};
-        forwardValidQueue_.getContent(edges);
-        for(const auto & elem: edges){
-            elem.getChild()->validQueueIncomingLookupFromStart_.clear();
-            elem.getParent()->validQueueOutgoingLookupFromStart_.clear();
-        }
-        forwardValidQueue_.clear();
-        numInconsistentOrUnconnectedTargetsInForward_ = 0u;
-        for(auto & edge: edges){
-            insertOrUpdateForwardValidQueue(Edge(edge.getParent(), edge.getChild(), edge.getCategory(),
-                                                 computeForwardEdgeKey(optObjPtr_, edge.getParent(), edge.getChild())));
-        }
-    }
-
-
-    void BiAIT::rebuildReverseValidQueue() {
-        std::vector<Edge> edges{};
-        reverseValidQueue_.getContent(edges);
-        for(const auto & elem : edges){
-            elem.getChild()->validQueueIncomingLookupFromGoal_.clear();
-            elem.getParent()->validQueueOutgoingLookupFromGoal_.clear();
-        }
-        reverseValidQueue_.clear();
-        numInconsistentOrUnconnectedTargetsInReverse_ = 0u;
-        for(const auto & edge : edges){
-            insertOrUpdateReverseValidQueue(Edge(edge.getParent(), edge.getChild(), edge.getCategory(),
-                                                 computeReverseEdgeKey(optObjPtr_, edge.getParent(), edge.getChild())));
-        }
-    }
-
-
     void BiAIT::checkMeetLazyEdgeToValid(MeetLazyEdgeQueue::Element *meetLazyEdgePointer) {
         if(!meetLazyEdgePointer->data.getParent().lock() || !meetLazyEdgePointer->data.getChild().lock()) {
             return ;
         }
         const auto & candidateParent = meetLazyEdgePointer->data.getParent().lock();
         const auto & candidateChild = meetLazyEdgePointer->data.getChild().lock();
-//        assert(candidateParent->getCategory()[3] && candidateChild->getCategory()[0]);
         if(candidateParent->getCategory()[4] && candidateChild->getCategory()[1]){
             // The meetLazyEdge has potential to be a meetValidEdge;
             if(candidateParent->hasWhitelistedChild(candidateChild) ||
@@ -2550,8 +2253,6 @@ namespace ompl::geometric {
                     invalidateRLWhenInvalidatingFL(candidateChild, nullptr);
                 }
                 meetLazyEdgeQueue_.remove(meetLazyEdgePointer);
-//                DebugBiAIT::modifyVertex(candidateParent->meetLazyEdgeQueuePointer_);
-//                DebugBiAIT::modifyVertex(candidateChild->meetLazyEdgeQueuePointer_);
                 updateVertexInRLSearchToMeetQueue(candidateParent);
                 updateVertexInFLSearchToMeetQueue(candidateChild);
             }
