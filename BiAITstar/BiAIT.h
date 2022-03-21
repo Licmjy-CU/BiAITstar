@@ -36,7 +36,6 @@ namespace ompl::geometric{
 
             base::PlannerStatus solve(const base::PlannerTerminationCondition & terminationCondition) override;
 
-
             /* ##########  ##########  ##########  ##########  ########## */
             /*                     Setter and Getter                      */
             /* ##########  ##########  ##########  ##########  ########## */
@@ -328,7 +327,6 @@ namespace ompl::geometric{
             std::size_t numFVIteration{0u};
 
             std::size_t numRVIteration{0u};
-
         };
 }
 

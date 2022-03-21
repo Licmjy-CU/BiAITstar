@@ -41,7 +41,7 @@ int main(int argc, char ** argv) {
 
     ompl::base::OptimizationObjectivePtr optimizationObjective_ =
             std::make_shared<ompl::base::PathLengthOptimizationObjective>(setup.getSpaceInformation());
-//    optimizationObjective_->setCostThreshold(ompl::base::Cost(144.0));
+    //    optimizationObjective_->setCostThreshold(ompl::base::Cost(144.0));
     optimizationObjective_->setCostThreshold(optimizationObjective_->infiniteCost());
     setup.setOptimizationObjective(optimizationObjective_);
 
@@ -49,10 +49,8 @@ int main(int argc, char ** argv) {
 
     // If using the ompl::base::PlannerPtr, we can not use the visualPtr since it is non-virtual;
     auto BiAITPtr = std::make_shared<ompl::geometric::BiAIT>(setup.getSpaceInformation());
-    BiAITPtr->params().setParam("enable_early_truncate", std::to_string(0));
     BiAITPtr->params().setParam("batch_size", std::to_string(800));
     BiAITPtr->params().setParam("rewire_factor", std::to_string(1.0));
-    BiAITPtr->params().setParam("bridge_sample_rate", std::to_string(0.2));
     setup.setPlanner(BiAITPtr);
     setup.print();
 
