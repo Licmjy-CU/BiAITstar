@@ -37,7 +37,7 @@ MESSAGE("CMAKE_<LANG>_COMPILER_VERSION: C: " ${CMAKE_C_COMPILER_VERSION} " C++: 
 SET(IS_TEST ON)
 
 IF(NOT APPLE)
-    SET(ompl_DIR /opt/ros/noetic/share/ompl/cmake/)
+    SET(ompl_DIR /opt/ros/$ENV{ROS_DISTRO}/share/ompl/cmake/)
 ENDIF()
 
 MESSAGE("OMPL:")
