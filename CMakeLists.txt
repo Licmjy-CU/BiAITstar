@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.21)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 PROJECT(BiAIT_Release)
 
 SET(CMAKE_CXX_STANDARD 20)
@@ -36,9 +36,13 @@ MESSAGE("CMAKE_<LANG>_COMPILER_VERSION: C: " ${CMAKE_C_COMPILER_VERSION} " C++: 
 
 SET(IS_TEST ON)
 
-IF(NOT APPLE)
+IF(NOT APPLE AND NOT IS_TEST)
     SET(ompl_DIR /opt/ros/$ENV{ROS_DISTRO}/share/ompl/cmake/)
+ELSEIF(IS_TEST)
+    SET(ompl_DIR /usr/local/share/ompl/cmake)
 ENDIF()
+#Default apt install ros-<version>-ompl will not install OMPLAPP, this will cause building problem in the target 'testRelease'. If you wish to build the code with the test demo, you should install OMPLAPP as the ompl website's instruction, and SET IS_TEST as ON.
+# However, the project can be build with the ros-<version>-ompl without the test case, in that situation, you should disable the IS_TEST as OFF.
 
 MESSAGE("OMPL:")
 FIND_PACKAGE(ompl REQUIRED)
