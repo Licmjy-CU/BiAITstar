@@ -5,330 +5,419 @@
 #ifndef BIAIT_DEV_BIAIT_H
 #define BIAIT_DEV_BIAIT_H
 
-#include "BiAITstar/Edge.h"
-#include "BiAITstar/WeakEdge.h"
-#include "BiAITstar/ImplicitGraph.h"
-
-#include <ompl/geometric/PathGeometric.h>
-#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
 #include <ompl/base/Planner.h>
+#include <ompl/base/objectives/PathLengthOptimizationObjective.h>
+#include <ompl/geometric/PathGeometric.h>
 #include <ompl/util/Console.h>
 
+#include "BiAITstar/Edge.h"
+#include "BiAITstar/ImplicitGraph.h"
+#include "BiAITstar/WeakEdge.h"
 
 using namespace ompl::geometric::biait;
 
-namespace ompl::geometric{
+namespace ompl::geometric {
 
-        class BiAIT : public ompl::base::Planner {
-        public:
+class BiAIT : public ompl::base::Planner {
+public:
+  explicit BiAIT(const base::SpaceInformationPtr &spaceInformationPtr);
 
-            explicit BiAIT(const base::SpaceInformationPtr& spaceInformationPtr);
+  ~BiAIT() override = default;
 
-            ~BiAIT() override = default;
+  void setup() override;
 
-            void setup() override;
+  void clear() override;
 
-            void clear() override;
+  base::PlannerStatus::StatusType ensureSetup();
 
-            base::PlannerStatus::StatusType ensureSetup();
+  base::PlannerStatus::StatusType ensureStartAndGoalStates(
+      const base::PlannerTerminationCondition &terminationCondition);
 
-            base::PlannerStatus::StatusType ensureStartAndGoalStates(const base::PlannerTerminationCondition & terminationCondition);
+  base::PlannerStatus
+  solve(const base::PlannerTerminationCondition &terminationCondition) override;
 
-            base::PlannerStatus solve(const base::PlannerTerminationCondition & terminationCondition) override;
+  /* ##########  ##########  ##########  ##########  ########## */
+  /*                     Setter and Getter                      */
+  /* ##########  ##########  ##########  ##########  ########## */
 
-            /* ##########  ##########  ##########  ##########  ########## */
-            /*                     Setter and Getter                      */
-            /* ##########  ##########  ##########  ##########  ########## */
+  void setUseKNearest(bool useKNearest) {
+    implicitGraph_.setUseKNearest(useKNearest);
+  }
 
-            void setUseKNearest(bool useKNearest) { implicitGraph_.setUseKNearest(useKNearest); }
+  bool getUseKNearest() const { return implicitGraph_.getUseKNearest(); }
 
-            bool getUseKNearest() const { return implicitGraph_.getUseKNearest(); }
+  void setRewireFactor(double rewireFactor) {
+    implicitGraph_.setRewireFactor(rewireFactor);
+  }
 
-            void setRewireFactor(double rewireFactor) { implicitGraph_.setRewireFactor(rewireFactor); }
+  double getRewireFactor() const { return implicitGraph_.getRewireFactor(); }
 
-            double getRewireFactor() const { return implicitGraph_.getRewireFactor(); }
+  void setBatchSize(std::size_t batchSize) { batchSize_ = batchSize; }
 
-            void setBatchSize(std::size_t batchSize) { batchSize_ = batchSize; }
+  std::size_t getBatchSize() const { return batchSize_; }
 
-            std::size_t getBatchSize() const { return batchSize_; }
+  void setEnablePruning(bool enablePruning) {
+    isPruningEnabled_ = enablePruning;
+  }
 
-            void setEnablePruning(bool enablePruning) { isPruningEnabled_ = enablePruning; }
+  bool isPruningEnabled() const { return isPruningEnabled_; }
 
-            bool isPruningEnabled() const { return isPruningEnabled_; }
+  void setMaxNumberOfGoals(std::size_t maxNumberOfGoals) {
+    implicitGraph_.setMaxNumberOfGoals(maxNumberOfGoals);
+  }
 
-            void setMaxNumberOfGoals(std::size_t maxNumberOfGoals) { implicitGraph_.setMaxNumberOfGoals(maxNumberOfGoals); }
+  std::size_t getMaxNumberOfGoals() const {
+    return implicitGraph_.getMaxNumberOfGoals();
+  }
 
-            std::size_t getMaxNumberOfGoals() const { return implicitGraph_.getMaxNumberOfGoals(); }
+  void setMeetInTheMiddleEnable(bool enableMeetInTheMiddle) {
+    isMeetInTheMiddleEnabled_ = enableMeetInTheMiddle;
+  }
 
-        private:
-            /* ##########  ##########  ##########  ##########  ########## */
-            /*                     Private Functions                      */
-            /* ##########  ##########  ##########  ##########  ########## */
+  bool isMeetInTheMiddleEnabled() { return isMeetInTheMiddleEnabled_; }
 
-            void insertStartVerticesIntoForwardLazyQueue();
+  void setBruteForceEnable(bool enableBruteForce) {
+    isBruteForceEnabled_ = enableBruteForce;
+  }
 
-            void insertGoalVerticesIntoReverseLazyQueue();
+  bool isBruteForceEnabled() { return isBruteForceEnabled_; }
 
-            void insertValidTreeIntoLazyQueue();
+  void setDFSONlyEnable(bool enableDFSOnly) { isDFSEnabled_ = enableDFSOnly; }
 
-            void insertFVVertexIntoFLQueue(const std::shared_ptr<Vertex> & vertex);
+  bool isDFSOnlyEnabled() { return isDFSEnabled_; }
 
-            void insertRVVertexIntoRLQueue(const std::shared_ptr<Vertex> & vertex);
+private:
+  /* ##########  ##########  ##########  ##########  ########## */
+  /*                     Private Functions                      */
+  /* ##########  ##########  ##########  ##########  ########## */
 
-            void expandStartVerticesIntoForwardValidQueue();
+  void insertStartVerticesIntoForwardLazyQueue();
 
-            void expandGoalVerticesIntoReverseValidQueue();
+  void insertGoalVerticesIntoReverseLazyQueue();
 
-            std::vector<Edge> getOutgoingEdges(const std::shared_ptr<Vertex> & vertex) const;
+  void insertValidTreeIntoLazyQueue();
 
-            static std::array<base::Cost, 3u> computeForwardEdgeKey(const base::OptimizationObjectivePtr & optObjPtr,
-                                                                    const std::shared_ptr<Vertex> & parent,
-                                                                    const std::shared_ptr<Vertex> & child);
+  void insertFVVertexIntoFLQueue(const std::shared_ptr<Vertex> &vertex);
 
-            static std::array<base::Cost, 3u> computeReverseEdgeKey(const base::OptimizationObjectivePtr & optObjPtr,
-                                                                    const std::shared_ptr<Vertex> & parent,
-                                                                    const std::shared_ptr<Vertex> & child);
+  void insertRVVertexIntoRLQueue(const std::shared_ptr<Vertex> &vertex);
 
-            std::array<base::Cost, 2u> computeForwardVertexKey(const std::shared_ptr<Vertex> & vertex) const;
+  void expandStartVerticesIntoForwardValidQueue();
 
-            std::array<base::Cost, 2u> computeReverseVertexKey(const std::shared_ptr<Vertex> & vertex) const;
+  void expandGoalVerticesIntoReverseValidQueue();
 
-            base::Cost computeMeetLazyKey(const std::shared_ptr<Vertex> & parent, const std::shared_ptr<Vertex> & child);
+  std::vector<Edge>
+  getOutgoingEdges(const std::shared_ptr<Vertex> &vertex) const;
 
-            base::Cost computeMeetValidKey(const Edge & edge, const base::Cost & edgeCost) const;
+  static std::array<base::Cost, 3u>
+  computeForwardEdgeKey(const base::OptimizationObjectivePtr &optObjPtr,
+                        const std::shared_ptr<Vertex> &parent,
+                        const std::shared_ptr<Vertex> &child);
 
-            base::Cost computeCostToStartHeuristic(const std::shared_ptr<Vertex> & vertex) const { return computeBestCostHeuristic(implicitGraph_.getStartVertices(), vertex); }
+  static std::array<base::Cost, 3u>
+  computeReverseEdgeKey(const base::OptimizationObjectivePtr &optObjPtr,
+                        const std::shared_ptr<Vertex> &parent,
+                        const std::shared_ptr<Vertex> &child);
 
-            base::Cost computeCostToGoalHeuristic(const std::shared_ptr<Vertex> & vertex) const { return computeBestCostHeuristic(vertex, implicitGraph_.getGoalVertices()); }
+  std::array<base::Cost, 2u>
+  computeForwardVertexKey(const std::shared_ptr<Vertex> &vertex) const;
 
-            void insertOrUpdateForwardValidQueue(const Edge & edge);
+  std::array<base::Cost, 2u>
+  computeReverseVertexKey(const std::shared_ptr<Vertex> &vertex) const;
 
-            void insertOrUpdateForwardValidQueue(const std::vector<Edge> &edge);
+  base::Cost computeMeetLazyKey(const std::shared_ptr<Vertex> &parent,
+                                const std::shared_ptr<Vertex> &child);
 
-            void insertOrUpdateReverseValidQueue(const Edge & edge);
+  base::Cost computeMeetValidKey(const Edge &edge,
+                                 const base::Cost &edgeCost) const;
 
-            void insertOrUpdateReverseValidQueue(const std::vector<Edge> &edge);
+  base::Cost
+  computeCostToStartHeuristic(const std::shared_ptr<Vertex> &vertex) const {
+    return computeBestCostHeuristic(implicitGraph_.getStartVertices(), vertex);
+  }
 
-            void insertOrUpdateForwardLazyQueue(const std::shared_ptr<Vertex> &vertex);
+  base::Cost
+  computeCostToGoalHeuristic(const std::shared_ptr<Vertex> &vertex) const {
+    return computeBestCostHeuristic(vertex, implicitGraph_.getGoalVertices());
+  }
 
-            void insertOrUpdateReverseLazyQueue(const std::shared_ptr<Vertex> &vertex);
+  void insertOrUpdateForwardValidQueue(const Edge &edge);
 
-            void insertOrUpdateMeetLazyQueue(const std::weak_ptr<Vertex> & parent, const std::weak_ptr<Vertex> & child);
+  void insertOrUpdateForwardValidQueue(const std::vector<Edge> &edge);
 
-            bool iterate(const base::PlannerTerminationCondition & terminationCondition);
+  void insertOrUpdateReverseValidQueue(const Edge &edge);
 
-            base::PlannerStatus::StatusType updateSolution();
+  void insertOrUpdateReverseValidQueue(const std::vector<Edge> &edge);
 
-            void updateExactSolution();
+  void insertOrUpdateForwardLazyQueue(const std::shared_ptr<Vertex> &vertex);
 
-            void informAboutPlannerStatus(base::PlannerStatus::StatusType status) const;
+  void insertOrUpdateReverseLazyQueue(const std::shared_ptr<Vertex> &vertex);
 
-            void informRunTimeStatus() const;
+  void insertOrUpdateMeetLazyQueue(const std::weak_ptr<Vertex> &parent,
+                                   const std::weak_ptr<Vertex> &child);
 
-            void informNewSolution() const;
+  bool iterate(const base::PlannerTerminationCondition &terminationCondition);
 
-            // The efficiency of the following four functions is not important;
-            std::size_t countNumVerticesInForwardValidPortion() const;
+  base::PlannerStatus::StatusType updateSolution();
 
-            std::size_t countNumVerticesInForwardLazyPortion() const;
+  void updateExactSolution();
 
-            std::size_t countNumVerticesInReverseValidPortion() const;
+  void informAboutPlannerStatus(base::PlannerStatus::StatusType status) const;
 
-            std::size_t countNumVerticesInReverseLazyPortion() const;
+  void informRunTimeStatus() const;
 
-            std::shared_ptr<geometric::PathGeometric> getPathToGoal() const;
+  void informNewSolution() const;
 
-            bool isEdgeBetter(const biait::Edge& lhs, const biait::Edge & rhs) const;
+  // The efficiency of the following four functions is not important;
+  std::size_t countNumVerticesInForwardValidPortion() const;
 
-            bool isMeetValidEdgeBetter(const biait::CostEdgePair & lhs, const biait::CostEdgePair & rhs) const {
-                return optObjPtr_->isCostBetterThan(lhs.second.getMeetValidEdgeKey(), rhs.second.getMeetValidEdgeKey());
-            }
+  std::size_t countNumVerticesInForwardLazyPortion() const;
 
-            bool isMeetLazyEdgeBetter(const biait::WeakEdge & lhs, const biait::WeakEdge & rhs) const {
-                return optObjPtr_->isCostBetterThan(lhs.getMeetLazyEdgeKey(), rhs.getMeetLazyEdgeKey());
-            }
+  std::size_t countNumVerticesInReverseValidPortion() const;
 
-            bool isVertexBetter(const biait::KeyVertexPair &lhs, const biait::KeyVertexPair &rhs) const;
+  std::size_t countNumVerticesInReverseLazyPortion() const;
 
-            base::Cost computeBestCostHeuristic(const std::shared_ptr<Vertex> & vertex, const std::vector<std::shared_ptr<Vertex> > & vectorVertex) const;
+  std::shared_ptr<geometric::PathGeometric> getPathToGoal() const;
 
-            base::Cost computeBestCostHeuristic(const std::vector<std::shared_ptr<Vertex> > & vectorVertex, const std::shared_ptr<Vertex> & vertex) const;
+  bool isEdgeBetter(const biait::Edge &lhs, const biait::Edge &rhs) const;
 
-            void updateCostToStartOfForwardValidDescendant(const std::shared_ptr<Vertex> & vertex) const;
+  bool isMeetValidEdgeBetter(const biait::CostEdgePair &lhs,
+                             const biait::CostEdgePair &rhs) const {
+    return optObjPtr_->isCostBetterThan(lhs.second.getMeetValidEdgeKey(),
+                                        rhs.second.getMeetValidEdgeKey());
+  }
 
-            void updateCostToGoalOfReverseValidDescendant(const std::shared_ptr<Vertex> & vertex) const;
+  bool isMeetLazyEdgeBetter(const biait::WeakEdge &lhs,
+                            const biait::WeakEdge &rhs) const {
+    return optObjPtr_->isCostBetterThan(lhs.getMeetLazyEdgeKey(),
+                                        rhs.getMeetLazyEdgeKey());
+  }
 
-            void updateCostToStartOfRVPredecessor(const std::shared_ptr<Vertex> & vertex) const;
+  bool isVertexBetter(const biait::KeyVertexPair &lhs,
+                      const biait::KeyVertexPair &rhs) const;
 
-            void insertOrUpdateMeetValidEdge(Edge & selectedValidEdge, const base::Cost & edgeCost);
+  base::Cost computeBestCostHeuristic(
+      const std::shared_ptr<Vertex> &vertex,
+      const std::vector<std::shared_ptr<Vertex>> &vectorVertex) const;
 
-            void insertOrUpdateMeetValidEdge(const std::shared_ptr<Vertex> & vertex) const;
+  base::Cost computeBestCostHeuristic(
+      const std::vector<std::shared_ptr<Vertex>> &vectorVertex,
+      const std::shared_ptr<Vertex> &vertex) const;
 
-            void insertOrUpdateMeetValidEdge(const std::shared_ptr<Vertex> & parent, const std::shared_ptr<Vertex> & child);
+  void updateCostToStartOfForwardValidDescendant(
+      const std::shared_ptr<Vertex> &vertex) const;
 
-            void updateCostToStartOfReverseValidPrecedent(const std::shared_ptr<Vertex> & vertex) const;
+  void updateCostToGoalOfReverseValidDescendant(
+      const std::shared_ptr<Vertex> &vertex) const;
 
-            void updateCostToGoalOfForwardValidPrecedent(const std::shared_ptr<Vertex> & vertex) const;
+  void
+  updateCostToStartOfRVPredecessor(const std::shared_ptr<Vertex> &vertex) const;
 
-            /* ##########  ##########  ##########  ##########  ########## */
-            // Functions called in function `iterate()`;
-            /* ##########  ##########  ##########  ##########  ########## */
+  void insertOrUpdateMeetValidEdge(Edge &selectedValidEdge,
+                                   const base::Cost &edgeCost);
 
-            bool performForwardLazySearch();
+  void insertOrUpdateMeetValidEdge(const std::shared_ptr<Vertex> &vertex) const;
 
-            bool performReverseLazySearch();
+  void insertOrUpdateMeetValidEdge(const std::shared_ptr<Vertex> &parent,
+                                   const std::shared_ptr<Vertex> &child);
 
-            bool performForwardValidSearch();
+  void updateCostToStartOfReverseValidPrecedent(
+      const std::shared_ptr<Vertex> &vertex) const;
 
-            bool performReverseValidSearch();
+  void updateCostToGoalOfForwardValidPrecedent(
+      const std::shared_ptr<Vertex> &vertex) const;
 
-            // Functions `iterateForwardLazySearch` and `iterateReverseLazySearch` only do one-step search when called;
-            void iterateForwardLazySearch();
+  /* ##########  ##########  ##########  ##########  ########## */
+  // Functions called in function `iterate()`;
+  /* ##########  ##########  ##########  ##########  ########## */
 
-            void iterateReverseLazySearch();
+  bool performForwardLazySearch();
 
-            // Functions `iterateForwardValidSearch` and `iterateReverseValidSearch` only do one-step search when called;
-            void iterateForwardValidSearch();
+  bool performReverseLazySearch();
 
-            void iterateReverseValidSearch();
+  bool performForwardValidSearch();
 
-            void clearLazyQueue();
+  bool performReverseValidSearch();
 
-            void clearForwardLazyQueue();
+  // Functions `iterateForwardLazySearch` and `iterateReverseLazySearch` only do
+  // one-step search when called;
+  void iterateForwardLazySearch();
 
-            void clearReverseLazyQueue();
+  void iterateReverseLazySearch();
 
-            void clearValidQueue();
+  // Functions `iterateForwardValidSearch` and `iterateReverseValidSearch` only
+  // do one-step search when called;
+  void iterateForwardValidSearch();
 
-            void clearForwardValidQueue();
+  void iterateReverseValidSearch();
 
-            void clearReverseValidQueue();
+  void clearLazyQueue();
 
-            void clearMeetLazyQueue();
+  void clearForwardLazyQueue();
 
-            void invalidateForwardLazyBranch(const std::shared_ptr<Vertex> &vertex);
+  void clearReverseLazyQueue();
 
-            void invalidateRLWhenInvalidatingFL(const std::shared_ptr<Vertex> &vertex, const std::shared_ptr<Vertex> &);
+  void clearValidQueue();
 
-            void invalidateFLToStartWhenInvalidatingFL(const std::shared_ptr<Vertex> &vertex,
-                                                       const std::shared_ptr<Vertex> &propagateFrom);
+  void clearForwardValidQueue();
 
-            void invalidateReverseLazyBranch(const std::shared_ptr<Vertex> &vertex);
+  void clearReverseValidQueue();
 
-            void invalidateFLWhenInvalidatingRL(const std::shared_ptr<Vertex> &vertex,
-                                                const std::shared_ptr<Vertex> &propagateFrom);
+  void clearMeetLazyQueue();
 
-            void invalidateRLToGoalWhenInvalidatingRL(const std::shared_ptr<Vertex> &vertex,
-                                                      const std::shared_ptr<Vertex> &propagateFrom);
+  void invalidateForwardLazyBranch(const std::shared_ptr<Vertex> &vertex);
 
-            void invalidateAllLazyComponent();
+  void invalidateRLWhenInvalidatingFL(const std::shared_ptr<Vertex> &vertex,
+                                      const std::shared_ptr<Vertex> &);
 
-            // Functions `updateForwardLazySearchVertex` and `updateReverseLazySearchVertex` will update a vertex in the lazy queue;
-            void updateVertexInFLSearch(const std::shared_ptr<Vertex> & vertex);
+  void invalidateFLToStartWhenInvalidatingFL(
+      const std::shared_ptr<Vertex> &vertex,
+      const std::shared_ptr<Vertex> &propagateFrom);
 
-            void updateVertexInFLSearchToFLTree(const std::shared_ptr<Vertex> & vertex);
+  void invalidateReverseLazyBranch(const std::shared_ptr<Vertex> &vertex);
 
-            void updateVertexInFLSearchToMeetQueue(const std::shared_ptr<Vertex> & vertex);
+  void
+  invalidateFLWhenInvalidatingRL(const std::shared_ptr<Vertex> &vertex,
+                                 const std::shared_ptr<Vertex> &propagateFrom);
 
-            // Find the best parent in FL search for vertex, and the bestCost via the `bestParent` is stored in the `bestCost`;
-            void updateVertexInFLSearch_bestParent(const std::shared_ptr<Vertex> & vertex, std::shared_ptr<Vertex>& bestParent, base::Cost& bestCost);
+  void invalidateRLToGoalWhenInvalidatingRL(
+      const std::shared_ptr<Vertex> &vertex,
+      const std::shared_ptr<Vertex> &propagateFrom);
 
-            // Can not pass a weak_ptr pointing to nullptr to function, so the returned flag shows whether found the bestParent;
-            bool updateVertexInFLSearch_bestWeakParent(const std::shared_ptr<Vertex> & vertex, std::weak_ptr<Vertex>& bestParent, base::Cost& bestCost);
+  void invalidateAllLazyComponent();
 
-            void updateVertexInRLSearch(const std::shared_ptr<Vertex> & vertex);
+  // Functions `updateForwardLazySearchVertex` and
+  // `updateReverseLazySearchVertex` will update a vertex in the lazy queue;
+  void updateVertexInFLSearch(const std::shared_ptr<Vertex> &vertex);
 
-            void updateVertexInRLSearchToRLTree(const std::shared_ptr<Vertex> & vertex);
+  void updateVertexInFLSearchToFLTree(const std::shared_ptr<Vertex> &vertex);
 
-            void updateVertexInRLSearchToMeetQueue(const std::shared_ptr<Vertex> & vertex);
+  void updateVertexInFLSearchToMeetQueue(const std::shared_ptr<Vertex> &vertex);
 
-            // Find the best parent in RL search for vertex, and the bestCost via the `bestParent` is stored in the `bestCost`;
-            void updateVertexInRLSearch_bestParent(const std::shared_ptr<Vertex> & vertex, std::shared_ptr<Vertex>& bestParent, base::Cost& bestCost);
+  // Find the best parent in FL search for vertex, and the bestCost via the
+  // `bestParent` is stored in the `bestCost`;
+  void updateVertexInFLSearch_bestParent(const std::shared_ptr<Vertex> &vertex,
+                                         std::shared_ptr<Vertex> &bestParent,
+                                         base::Cost &bestCost);
 
-            // Can not pass a weak_ptr pointing to nullptr to function, so the returned flag shows whether found the bestParent;
-            bool updateVertexInRLSearch_bestWeakParent(const std::shared_ptr<Vertex> & vertex, std::weak_ptr<Vertex>& bestParent, base::Cost& bestCost);
+  // Can not pass a weak_ptr pointing to nullptr to function, so the returned
+  // flag shows whether found the bestParent;
+  bool
+  updateVertexInFLSearch_bestWeakParent(const std::shared_ptr<Vertex> &vertex,
+                                        std::weak_ptr<Vertex> &bestParent,
+                                        base::Cost &bestCost);
 
-            void updateForwardLazyNeighbors(const std::shared_ptr<Vertex> & vertex);
+  void updateVertexInRLSearch(const std::shared_ptr<Vertex> &vertex);
 
-            void updateReverseLazyNeighbors(const std::shared_ptr<Vertex> & vertex);
+  void updateVertexInRLSearchToRLTree(const std::shared_ptr<Vertex> &vertex);
 
-            void propagateCostFromStartInRLTree(const std::shared_ptr<Vertex> & vertex);
+  void updateVertexInRLSearchToMeetQueue(const std::shared_ptr<Vertex> &vertex);
 
-            void propagateCostToGoalInFLTree(const std::shared_ptr<Vertex> & vertex);
+  // Find the best parent in RL search for vertex, and the bestCost via the
+  // `bestParent` is stored in the `bestCost`;
+  void updateVertexInRLSearch_bestParent(const std::shared_ptr<Vertex> &vertex,
+                                         std::shared_ptr<Vertex> &bestParent,
+                                         base::Cost &bestCost);
 
-            void updateValidQueueIfVertexInside(const std::shared_ptr<Vertex> & vertex);
+  // Can not pass a weak_ptr pointing to nullptr to function, so the returned
+  // flag shows whether found the bestParent;
+  bool
+  updateVertexInRLSearch_bestWeakParent(const std::shared_ptr<Vertex> &vertex,
+                                        std::weak_ptr<Vertex> &bestParent,
+                                        base::Cost &bestCost);
 
-            void updateFVValidQueueIfVertexInside(const std::shared_ptr<Vertex> & vertex);
+  void updateForwardLazyNeighbors(const std::shared_ptr<Vertex> &vertex);
 
-            void updateRVValidQueueIfVertexInside(const std::shared_ptr<Vertex> & vertex);
+  void updateReverseLazyNeighbors(const std::shared_ptr<Vertex> &vertex);
 
-            // If found, return the pointer to that in the meetLazyQueue, otherwise, return nullptr;
-            MeetLazyEdgeQueue::Element * findInMeetLazyQueue(const Edge & edge);
+  void propagateCostFromStartInRLTree(const std::shared_ptr<Vertex> &vertex);
 
-            // If found, return the pointer to that in the meetLazyQueue, otherwise, return nullptr;
-            MeetLazyEdgeQueue::Element * findInMeetLazyQueue(const WeakEdge & edge);
+  void propagateCostToGoalInFLTree(const std::shared_ptr<Vertex> &vertex);
 
-            // If found, return the pointer to that in the meetValidQueue, otherwise, return nullptr;
-            MeetValidEdgeQueue::Element * findInMeetValidQueue(const Edge & edge);
+  void updateValidQueueIfVertexInside(const std::shared_ptr<Vertex> &vertex);
 
-            void removeFromMeetValidQueue(const std::vector<MeetValidEdgeQueue::Element *>& vectorOfMeetValidEdgesToBePruned);
+  void updateFVValidQueueIfVertexInside(const std::shared_ptr<Vertex> &vertex);
 
-            void checkMeetLazyEdgeToValid(MeetLazyEdgeQueue::Element * meetLazyEdgePointer);
+  void updateRVValidQueueIfVertexInside(const std::shared_ptr<Vertex> &vertex);
 
-            /* ##########  ##########  ##########  ##########  ########## */
-            /*                          Members                           */
-            /* ##########  ##########  ##########  ##########  ########## */
+  // If found, return the pointer to that in the meetLazyQueue, otherwise,
+  // return nullptr;
+  MeetLazyEdgeQueue::Element *findInMeetLazyQueue(const Edge &edge);
 
-            base::Cost solutionCost_;
+  // If found, return the pointer to that in the meetLazyQueue, otherwise,
+  // return nullptr;
+  MeetLazyEdgeQueue::Element *findInMeetLazyQueue(const WeakEdge &edge);
 
-            biait::ImplicitGraph implicitGraph_;
+  // If found, return the pointer to that in the meetValidQueue, otherwise,
+  // return nullptr;
+  MeetValidEdgeQueue::Element *findInMeetValidQueue(const Edge &edge);
 
-            // In forward valid queue, the parent is close to the start and child is far from the start;
-            biait::EdgeQueue forwardValidQueue_;
+  void removeFromMeetValidQueue(const std::vector<MeetValidEdgeQueue::Element *>
+                                    &vectorOfMeetValidEdgesToBePruned);
 
-            // In forward valid queue, the parent is close to the goal and child is far from the goal;
-            biait::EdgeQueue reverseValidQueue_;
+  void
+  checkMeetLazyEdgeToValid(MeetLazyEdgeQueue::Element *meetLazyEdgePointer);
 
-            // We have to make sure the parent of MeetEdge is close to the start, and child is close to the goal(s);
-            // We use this one for the valid trees meet;
-            mutable biait::MeetValidEdgeQueue meetValidEdgeQueue_;
+  /* ##########  ##########  ##########  ##########  ########## */
+  /*                          Members                           */
+  /* ##########  ##########  ##########  ##########  ########## */
 
-            // \hat{h}_{g-FL}(x_p) + \hat{c}(x_p, x_c) + \hat{h}_{g-RL}(x_c);
-            mutable biait::MeetLazyEdgeQueue meetLazyEdgeQueue_;
+  base::Cost solutionCost_;
 
-            biait::VertexQueue forwardLazyQueue_;
+  biait::ImplicitGraph implicitGraph_;
 
-            biait::VertexQueue reverseLazyQueue_;
+  // In forward valid queue, the parent is close to the start and child is far
+  // from the start;
+  biait::EdgeQueue forwardValidQueue_;
 
-            std::size_t numIterations_{0u};
+  // In forward valid queue, the parent is close to the goal and child is far
+  // from the goal;
+  biait::EdgeQueue reverseValidQueue_;
 
-            std::size_t batchSize_{500u};
+  // We have to make sure the parent of MeetEdge is close to the start, and
+  // child is close to the goal(s); We use this one for the valid trees meet;
+  mutable biait::MeetValidEdgeQueue meetValidEdgeQueue_;
 
-            bool isPruningEnabled_{true};
+  // \hat{h}_{g-FL}(x_p) + \hat{c}(x_p, x_c) + \hat{h}_{g-RL}(x_c);
+  mutable biait::MeetLazyEdgeQueue meetLazyEdgeQueue_;
 
-            base::OptimizationObjectivePtr optObjPtr_{nullptr};
+  biait::VertexQueue forwardLazyQueue_;
 
-            base::SpaceInformationPtr spaceInformationPtr_{nullptr};
+  biait::VertexQueue reverseLazyQueue_;
 
-            base::MotionValidatorPtr motionValidatorPtr_{nullptr};
+  std::size_t numIterations_{0u};
 
-            std::size_t numProcessedEdges_{0u};
+  std::size_t batchSize_{500u};
 
-            std::size_t numEdgeCollisionChecks_{0u};
+  bool isPruningEnabled_{true};
 
-            std::size_t numInconsistentOrUnconnectedTargetsInForward_{0u};
+  bool isMeetInTheMiddleEnabled_{true};
 
-            std::size_t numInconsistentOrUnconnectedTargetsInReverse_{0u};
+  bool isBruteForceEnabled_{false};
 
-            std::size_t numFLIteration{0u};
+  bool isDFSEnabled_{false};
 
-            std::size_t numRLIteration{0u};
+  base::OptimizationObjectivePtr optObjPtr_{nullptr};
 
-            std::size_t numFVIteration{0u};
+  base::SpaceInformationPtr spaceInformationPtr_{nullptr};
 
-            std::size_t numRVIteration{0u};
-        };
-}
+  base::MotionValidatorPtr motionValidatorPtr_{nullptr};
 
+  std::size_t numProcessedEdges_{0u};
 
-#endif //BIAIT_DEV_BIAIT_H
+  std::size_t numEdgeCollisionChecks_{0u};
+
+  std::size_t numInconsistentOrUnconnectedTargetsInForward_{0u};
+
+  std::size_t numInconsistentOrUnconnectedTargetsInReverse_{0u};
+
+  std::size_t numFLIteration{0u};
+
+  std::size_t numRLIteration{0u};
+
+  std::size_t numFVIteration{0u};
+
+  std::size_t numRVIteration{0u};
+};
+} // namespace ompl::geometric
+
+#endif // BIAIT_DEV_BIAIT_H

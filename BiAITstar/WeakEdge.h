@@ -5,61 +5,62 @@
 #ifndef BIAIT_DEV_WEAKEDGE_H
 #define BIAIT_DEV_WEAKEDGE_H
 
+#include <ompl/base/Cost.h>
+
 #include <array>
+#include <bitset>
 #include <limits>
 #include <memory>
-#include <bitset>
-
-#include <ompl/base/Cost.h>
 
 //#include "BiAITstar/Queuetypes.h"
 #include "BiAITstar/Edge.h"
 
-
 namespace ompl::geometric::biait {
 
-    class WeakEdge {
+class WeakEdge {
+ public:
+  WeakEdge();
 
-    public:
-        WeakEdge();
+  // Constructor for meet edges, default assign the category_ as 0b00100, and
+  // edgeKey as signaling_NaN;
+  WeakEdge(std::weak_ptr<Vertex> parent, std::weak_ptr<Vertex> child,
+           const base::Cost &meetLazyEdgeKey);
 
-        // Constructor for meet edges, default assign the category_ as 0b00100, and edgeKey as signaling_NaN;
-        WeakEdge(std::weak_ptr<Vertex> parent,
-                std::weak_ptr<Vertex> child,
-                const base::Cost & meetLazyEdgeKey);
+  explicit WeakEdge(const Edge &edge);
 
-        explicit WeakEdge(const Edge& edge);
+  ~WeakEdge() = default;
 
-        ~WeakEdge() = default;
+  /* ##########  ##########  ##########  ##########  ########## */
+  /*                     Setter and Getter                      */
+  /* ##########  ##########  ##########  ##########  ########## */
 
-        /* ##########  ##########  ##########  ##########  ########## */
-        /*                     Setter and Getter                      */
-        /* ##########  ##########  ##########  ##########  ########## */
+  std::weak_ptr<Vertex> getParent() const { return parent_; }
 
-        std::weak_ptr<Vertex> getParent() const { return parent_; }
+  std::weak_ptr<Vertex> getChild() const { return child_; }
 
-        std::weak_ptr<Vertex> getChild() const { return child_; }
+  const base::Cost &getMeetLazyEdgeKey() const { return meetLazyEdgeKey_; }
 
-        const base::Cost & getMeetLazyEdgeKey() const { return meetLazyEdgeKey_; }
+  void setMeetLazyEdgeKey(const base::Cost meetLazyEdgeKey) {
+    meetLazyEdgeKey_ = meetLazyEdgeKey;
+  }
 
-        void setMeetLazyEdgeKey(const base::Cost meetLazyEdgeKey) { meetLazyEdgeKey_ = meetLazyEdgeKey; }
+ private:
+  /* ##########  ##########  ##########  ##########  ########## */
+  /*                          Private                           */
+  /* ##########  ##########  ##########  ##########  ########## */
+  std::weak_ptr<Vertex> parent_;
 
-    private:
+  std::weak_ptr<Vertex> child_;
 
-        /* ##########  ##########  ##########  ##########  ########## */
-        /*                          Private                           */
-        /* ##########  ##########  ##########  ##########  ########## */
-        std::weak_ptr<Vertex> parent_;
+  // We have to make sure the parent of MeetEdge is to the start, and child to
+  // the goal(s);
+  base::Cost meetLazyEdgeKey_;
+};
 
-        std::weak_ptr<Vertex> child_;
+using MeetLazyEdgeQueue =
+    ompl::BinaryHeap<WeakEdge,
+                     std::function<bool(const WeakEdge &, const WeakEdge &)> >;
 
-        // We have to make sure the parent of MeetEdge is to the start, and child to the goal(s);
-        base::Cost meetLazyEdgeKey_;
-    };
+}  // namespace ompl::geometric::biait
 
-    using MeetLazyEdgeQueue = ompl::BinaryHeap<WeakEdge, std::function<bool(const WeakEdge &, const WeakEdge &)> >;
-
-}
-
-
-#endif //BIAIT_DEV_WEAKEDGE_H
+#endif  // BIAIT_DEV_WEAKEDGE_H

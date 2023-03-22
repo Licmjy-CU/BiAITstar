@@ -8,10 +8,10 @@
 #include <iostream>
 
 namespace ompl::geometric::biait {
-    static std::size_t generateId() {
-        static std::size_t id{0u};
-        return id++;
-    }
+static std::size_t generateId() {
+  static std::size_t id{0u};
+  return id++;
 }
+}  // namespace ompl::geometric::biait
 
-#endif //BIAIT_DEV_GENERATEID_H
+#endif  // BIAIT_DEV_GENERATEID_H
