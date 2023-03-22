@@ -19,7 +19,7 @@ using namespace ompl::geometric::biait;
 namespace ompl::geometric {
 
 class BiAIT : public ompl::base::Planner {
- public:
+public:
   explicit BiAIT(const base::SpaceInformationPtr &spaceInformationPtr);
 
   ~BiAIT() override = default;
@@ -33,8 +33,8 @@ class BiAIT : public ompl::base::Planner {
   base::PlannerStatus::StatusType ensureStartAndGoalStates(
       const base::PlannerTerminationCondition &terminationCondition);
 
-  base::PlannerStatus solve(
-      const base::PlannerTerminationCondition &terminationCondition) override;
+  base::PlannerStatus
+  solve(const base::PlannerTerminationCondition &terminationCondition) override;
 
   /* ##########  ##########  ##########  ##########  ########## */
   /*                     Setter and Getter                      */
@@ -70,7 +70,23 @@ class BiAIT : public ompl::base::Planner {
     return implicitGraph_.getMaxNumberOfGoals();
   }
 
- private:
+  void setMeetInTheMiddleEnable(bool enableMeetInTheMiddle) {
+    isMeetInTheMiddleEnabled_ = enableMeetInTheMiddle;
+  }
+
+  bool isMeetInTheMiddleEnabled() { return isMeetInTheMiddleEnabled_; }
+
+  void setBruteForceEnable(bool enableBruteForce) {
+    isBruteForceEnabled_ = enableBruteForce;
+  }
+
+  bool isBruteForceEnabled() { return isBruteForceEnabled_; }
+
+  void setDFSONlyEnable(bool enableDFSOnly) { isDFSEnabled_ = enableDFSOnly; }
+
+  bool isDFSOnlyEnabled() { return isDFSEnabled_; }
+
+private:
   /* ##########  ##########  ##########  ##########  ########## */
   /*                     Private Functions                      */
   /* ##########  ##########  ##########  ##########  ########## */
@@ -89,24 +105,24 @@ class BiAIT : public ompl::base::Planner {
 
   void expandGoalVerticesIntoReverseValidQueue();
 
-  std::vector<Edge> getOutgoingEdges(
-      const std::shared_ptr<Vertex> &vertex) const;
+  std::vector<Edge>
+  getOutgoingEdges(const std::shared_ptr<Vertex> &vertex) const;
 
-  static std::array<base::Cost, 3u> computeForwardEdgeKey(
-      const base::OptimizationObjectivePtr &optObjPtr,
-      const std::shared_ptr<Vertex> &parent,
-      const std::shared_ptr<Vertex> &child);
+  static std::array<base::Cost, 3u>
+  computeForwardEdgeKey(const base::OptimizationObjectivePtr &optObjPtr,
+                        const std::shared_ptr<Vertex> &parent,
+                        const std::shared_ptr<Vertex> &child);
 
-  static std::array<base::Cost, 3u> computeReverseEdgeKey(
-      const base::OptimizationObjectivePtr &optObjPtr,
-      const std::shared_ptr<Vertex> &parent,
-      const std::shared_ptr<Vertex> &child);
+  static std::array<base::Cost, 3u>
+  computeReverseEdgeKey(const base::OptimizationObjectivePtr &optObjPtr,
+                        const std::shared_ptr<Vertex> &parent,
+                        const std::shared_ptr<Vertex> &child);
 
-  std::array<base::Cost, 2u> computeForwardVertexKey(
-      const std::shared_ptr<Vertex> &vertex) const;
+  std::array<base::Cost, 2u>
+  computeForwardVertexKey(const std::shared_ptr<Vertex> &vertex) const;
 
-  std::array<base::Cost, 2u> computeReverseVertexKey(
-      const std::shared_ptr<Vertex> &vertex) const;
+  std::array<base::Cost, 2u>
+  computeReverseVertexKey(const std::shared_ptr<Vertex> &vertex) const;
 
   base::Cost computeMeetLazyKey(const std::shared_ptr<Vertex> &parent,
                                 const std::shared_ptr<Vertex> &child);
@@ -114,13 +130,13 @@ class BiAIT : public ompl::base::Planner {
   base::Cost computeMeetValidKey(const Edge &edge,
                                  const base::Cost &edgeCost) const;
 
-  base::Cost computeCostToStartHeuristic(
-      const std::shared_ptr<Vertex> &vertex) const {
+  base::Cost
+  computeCostToStartHeuristic(const std::shared_ptr<Vertex> &vertex) const {
     return computeBestCostHeuristic(implicitGraph_.getStartVertices(), vertex);
   }
 
-  base::Cost computeCostToGoalHeuristic(
-      const std::shared_ptr<Vertex> &vertex) const {
+  base::Cost
+  computeCostToGoalHeuristic(const std::shared_ptr<Vertex> &vertex) const {
     return computeBestCostHeuristic(vertex, implicitGraph_.getGoalVertices());
   }
 
@@ -181,10 +197,10 @@ class BiAIT : public ompl::base::Planner {
 
   base::Cost computeBestCostHeuristic(
       const std::shared_ptr<Vertex> &vertex,
-      const std::vector<std::shared_ptr<Vertex> > &vectorVertex) const;
+      const std::vector<std::shared_ptr<Vertex>> &vectorVertex) const;
 
   base::Cost computeBestCostHeuristic(
-      const std::vector<std::shared_ptr<Vertex> > &vectorVertex,
+      const std::vector<std::shared_ptr<Vertex>> &vectorVertex,
       const std::shared_ptr<Vertex> &vertex) const;
 
   void updateCostToStartOfForwardValidDescendant(
@@ -193,8 +209,8 @@ class BiAIT : public ompl::base::Planner {
   void updateCostToGoalOfReverseValidDescendant(
       const std::shared_ptr<Vertex> &vertex) const;
 
-  void updateCostToStartOfRVPredecessor(
-      const std::shared_ptr<Vertex> &vertex) const;
+  void
+  updateCostToStartOfRVPredecessor(const std::shared_ptr<Vertex> &vertex) const;
 
   void insertOrUpdateMeetValidEdge(Edge &selectedValidEdge,
                                    const base::Cost &edgeCost);
@@ -259,9 +275,9 @@ class BiAIT : public ompl::base::Planner {
 
   void invalidateReverseLazyBranch(const std::shared_ptr<Vertex> &vertex);
 
-  void invalidateFLWhenInvalidatingRL(
-      const std::shared_ptr<Vertex> &vertex,
-      const std::shared_ptr<Vertex> &propagateFrom);
+  void
+  invalidateFLWhenInvalidatingRL(const std::shared_ptr<Vertex> &vertex,
+                                 const std::shared_ptr<Vertex> &propagateFrom);
 
   void invalidateRLToGoalWhenInvalidatingRL(
       const std::shared_ptr<Vertex> &vertex,
@@ -285,9 +301,10 @@ class BiAIT : public ompl::base::Planner {
 
   // Can not pass a weak_ptr pointing to nullptr to function, so the returned
   // flag shows whether found the bestParent;
-  bool updateVertexInFLSearch_bestWeakParent(
-      const std::shared_ptr<Vertex> &vertex, std::weak_ptr<Vertex> &bestParent,
-      base::Cost &bestCost);
+  bool
+  updateVertexInFLSearch_bestWeakParent(const std::shared_ptr<Vertex> &vertex,
+                                        std::weak_ptr<Vertex> &bestParent,
+                                        base::Cost &bestCost);
 
   void updateVertexInRLSearch(const std::shared_ptr<Vertex> &vertex);
 
@@ -303,9 +320,10 @@ class BiAIT : public ompl::base::Planner {
 
   // Can not pass a weak_ptr pointing to nullptr to function, so the returned
   // flag shows whether found the bestParent;
-  bool updateVertexInRLSearch_bestWeakParent(
-      const std::shared_ptr<Vertex> &vertex, std::weak_ptr<Vertex> &bestParent,
-      base::Cost &bestCost);
+  bool
+  updateVertexInRLSearch_bestWeakParent(const std::shared_ptr<Vertex> &vertex,
+                                        std::weak_ptr<Vertex> &bestParent,
+                                        base::Cost &bestCost);
 
   void updateForwardLazyNeighbors(const std::shared_ptr<Vertex> &vertex);
 
@@ -336,8 +354,8 @@ class BiAIT : public ompl::base::Planner {
   void removeFromMeetValidQueue(const std::vector<MeetValidEdgeQueue::Element *>
                                     &vectorOfMeetValidEdgesToBePruned);
 
-  void checkMeetLazyEdgeToValid(
-      MeetLazyEdgeQueue::Element *meetLazyEdgePointer);
+  void
+  checkMeetLazyEdgeToValid(MeetLazyEdgeQueue::Element *meetLazyEdgePointer);
 
   /* ##########  ##########  ##########  ##########  ########## */
   /*                          Members                           */
@@ -372,6 +390,12 @@ class BiAIT : public ompl::base::Planner {
 
   bool isPruningEnabled_{true};
 
+  bool isMeetInTheMiddleEnabled_{true};
+
+  bool isBruteForceEnabled_{false};
+
+  bool isDFSEnabled_{false};
+
   base::OptimizationObjectivePtr optObjPtr_{nullptr};
 
   base::SpaceInformationPtr spaceInformationPtr_{nullptr};
@@ -394,6 +418,6 @@ class BiAIT : public ompl::base::Planner {
 
   std::size_t numRVIteration{0u};
 };
-}  // namespace ompl::geometric
+} // namespace ompl::geometric
 
-#endif  // BIAIT_DEV_BIAIT_H
+#endif // BIAIT_DEV_BIAIT_H

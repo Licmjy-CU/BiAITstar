@@ -6,7 +6,7 @@
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <omplapp/apps/SE2RigidBodyPlanning.h>
 
-#include "BiAITstar//BiAIT.h"
+#include "BiAITstar/BiAIT.h"
 
 using namespace ompl;
 
@@ -14,7 +14,7 @@ const double stateValidityCheckingResolution{0.0002};
 
 #define OMPLAPP_CUSTOM_RESOURCE_DIR "/Users/licm/Development/BiAIT/EnvAndModel"
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   app::SE2RigidBodyPlanning setup;
   std::string benchmark_name;
 
@@ -56,8 +56,11 @@ int main(int argc, char** argv) {
   // is non-virtual;
   auto BiAITPtr =
       std::make_shared<ompl::geometric::BiAIT>(setup.getSpaceInformation());
-  BiAITPtr->params().setParam("batch_size", std::to_string(800));
+  BiAITPtr->params().setParam("batch_size", std::to_string(1000));
   BiAITPtr->params().setParam("rewire_factor", std::to_string(1.0));
+  BiAITPtr->params().setParam("enable_meet_in_the_middle", std::to_string(1));
+  BiAITPtr->params().setParam("enable_brute_force", std::to_string(0));
+  BiAITPtr->params().setParam("enable_DFS_only", std::to_string(0));
   setup.setPlanner(BiAITPtr);
   setup.print();
 

@@ -14,10 +14,28 @@ namespace ompl::geometric::biait {
 
 class Utility {
  public:
+  // clang-format off
+  /**
+   *
+   * @tparam elemType
+   * @param container
+   * @param value
+   * @brief a wrapper for std::vector<>.erase;
+   */
+  // clang-format on
   template <class elemType>
   static inline void removeFromVectorByValue(std::vector<elemType>& container,
                                              const elemType& value);
 
+  // clang-format off
+  /**
+   *
+   * @tparam elemType
+   * @param container
+   * @param value
+   * @bried if container contains value, return true, else false;
+   */
+  // clang-format on
   template <class elemType>
   static inline bool containsByValue(const std::vector<elemType>& container,
                                      const elemType& value);

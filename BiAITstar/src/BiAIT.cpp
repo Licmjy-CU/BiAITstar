@@ -7,8 +7,7 @@
 namespace ompl::geometric {
 
 BiAIT::BiAIT(const base::SpaceInformationPtr &spaceInformationPtr)
-    : base::Planner(spaceInformationPtr, "BiAIT"),
-      solutionCost_(),
+    : base::Planner(spaceInformationPtr, "BiAIT"), solutionCost_(),
       implicitGraph_(solutionCost_),
       forwardValidQueue_([this](const auto &lhs, const auto &rhs) {
         return isEdgeBetter(lhs, rhs);
@@ -48,6 +47,13 @@ BiAIT::BiAIT(const base::SpaceInformationPtr &spaceInformationPtr)
                      &BiAIT::isPruningEnabled, "0,1");
   declareParam<std::size_t>("max_num_goals", this, &BiAIT::setMaxNumberOfGoals,
                             &BiAIT::getMaxNumberOfGoals, "1:1:1000");
+  declareParam<bool>("enable_meet_in_the_middle", this,
+                     &BiAIT::setMeetInTheMiddleEnable,
+                     &BiAIT::isMeetInTheMiddleEnabled, "0,1");
+  declareParam<bool>("enable_brute_force", this, &BiAIT::setBruteForceEnable,
+                     &BiAIT::isBruteForceEnabled, "0,1");
+  declareParam<bool>("enable_DFS_only", this, &BiAIT::setDFSONlyEnable,
+                     &BiAIT::isDFSOnlyEnabled, "0,1");
 
   // Progress properties;
   addPlannerProgressProperty("iterations INTEGER", [this]() {
@@ -60,7 +66,14 @@ BiAIT::BiAIT(const base::SpaceInformationPtr &spaceInformationPtr)
 
 void BiAIT::setup() {
   Planner::setup();
-  if (static_cast<bool>(Planner::pdef_)) {
+  // only one of the lazy search mode can be set true;
+  bool correctLazySearchMode =
+      (static_cast<u_int16_t>(isMeetInTheMiddleEnabled_) +
+           static_cast<u_int16_t>(isBruteForceEnabled_) +
+           static_cast<u_int16_t>(isDFSEnabled_) ==
+       1);
+
+  if (static_cast<bool>(Planner::pdef_) and correctLazySearchMode) {
     if (!Planner::pdef_->hasOptimizationObjective()) {
       OMPL_WARN(
           "%s: No optimization objective has been specified. Defaulting to "
@@ -81,7 +94,7 @@ void BiAIT::setup() {
     solutionCost_ = optObjPtr_->infiniteCost();
     motionValidatorPtr_ = spaceInformationPtr_->getMotionValidator();
     implicitGraph_.setup(spaceInformationPtr_, Planner::pdef_,
-                         &pis_);  // pis: PlannerInputState
+                         &pis_); // pis: PlannerInputState
   } else {
     setup_ = false;
     OMPL_ERROR("Fail to setup");
@@ -135,8 +148,8 @@ base::PlannerStatus::StatusType BiAIT::ensureStartAndGoalStates(
   return base::PlannerStatus::StatusType::UNKNOWN;
 }
 
-base::PlannerStatus BiAIT::solve(
-    const base::PlannerTerminationCondition &terminationCondition) {
+base::PlannerStatus
+BiAIT::solve(const base::PlannerTerminationCondition &terminationCondition) {
   // Ensure planning problem is successfully set up;
   base::PlannerStatus::StatusType plannerStatus = ensureSetup();
   if (plannerStatus == base::PlannerStatus::StatusType::ABORT) {
@@ -161,7 +174,8 @@ base::PlannerStatus BiAIT::solve(
   expandGoalVerticesIntoReverseValidQueue();
 
   while (!terminationCondition && !optObjPtr_->isSatisfied(solutionCost_)) {
-    if (!iterate(terminationCondition)) break;
+    if (!iterate(terminationCondition))
+      break;
   }
 
   // Inform the solution status;
@@ -179,8 +193,7 @@ void BiAIT::insertStartVerticesIntoForwardLazyQueue() {
     elem->setCategory(3, true);
     elem->heuristicCost_rhs_ForwardLazy_ = optObjPtr_->identityCost();
     elem->heuristicCost_g_ForwardLazy_ = optObjPtr_->infiniteCost();
-    KeyVertexPair elemKeyPair(
-        {computeCostToGoalHeuristic(elem), optObjPtr_->identityCost()}, elem);
+    KeyVertexPair elemKeyPair(computeForwardVertexKey(elem), elem);
     elem->setForwardLazyQueuePointer(forwardLazyQueue_.insert(elemKeyPair));
   }
 }
@@ -190,8 +203,7 @@ void BiAIT::insertGoalVerticesIntoReverseLazyQueue() {
     elem->setCategory(0, true);
     elem->heuristicCost_rhs_ReverseLazy_ = optObjPtr_->identityCost();
     elem->heuristicCost_g_ReverseLazy_ = optObjPtr_->infiniteCost();
-    KeyVertexPair elemKeyPair(
-        {computeCostToStartHeuristic(elem), optObjPtr_->identityCost()}, elem);
+    KeyVertexPair elemKeyPair(computeReverseVertexKey(elem), elem);
     elem->setReverseLazyQueuePointer(reverseLazyQueue_.insert(elemKeyPair));
   }
 }
@@ -216,11 +228,7 @@ void BiAIT::insertFVVertexIntoFLQueue(const std::shared_ptr<Vertex> &vertex) {
   }
   vertex->heuristicCost_rhs_ForwardLazy_ = vertex->costToStart_;
   vertex->heuristicCost_g_ForwardLazy_ = optObjPtr_->infiniteCost();
-  KeyVertexPair elemKeyPair(
-      {optObjPtr_->combineCosts(vertex->heuristicCost_rhs_ForwardLazy_,
-                                computeCostToGoalHeuristic(vertex)),
-       vertex->heuristicCost_rhs_ForwardLazy_},
-      vertex);
+  KeyVertexPair elemKeyPair(computeForwardVertexKey(vertex), vertex);
   vertex->setForwardLazyQueuePointer(forwardLazyQueue_.insert(elemKeyPair));
 }
 
@@ -232,11 +240,7 @@ void BiAIT::insertRVVertexIntoRLQueue(const std::shared_ptr<Vertex> &vertex) {
   }
   vertex->heuristicCost_rhs_ReverseLazy_ = vertex->costToGoal_;
   vertex->heuristicCost_g_ReverseLazy_ = optObjPtr_->infiniteCost();
-  KeyVertexPair elemKeyPair(
-      {optObjPtr_->combineCosts(vertex->heuristicCost_rhs_ReverseLazy_,
-                                computeCostToStartHeuristic(vertex)),
-       vertex->heuristicCost_rhs_ReverseLazy_},
-      vertex);
+  KeyVertexPair elemKeyPair(computeReverseVertexKey(vertex), vertex);
   vertex->setReverseLazyQueuePointer(reverseLazyQueue_.insert(elemKeyPair));
 }
 
@@ -260,8 +264,8 @@ void BiAIT::expandGoalVerticesIntoReverseValidQueue() {
   }
 }
 
-std::vector<Edge> BiAIT::getOutgoingEdges(
-    const std::shared_ptr<Vertex> &vertex) const {
+std::vector<Edge>
+BiAIT::getOutgoingEdges(const std::shared_ptr<Vertex> &vertex) const {
   // assert vertex is a valid vertex;
   assert(vertex->getCategory()[4] || vertex->getCategory()[1]);
 
@@ -297,9 +301,11 @@ std::vector<Edge> BiAIT::getOutgoingEdges(
   // Handle the current neighbors in the GNAT;
   for (const auto &elem : implicitGraph_.getNeighbors(vertex)) {
     // Avoid self loop;
-    if (vertex->getId() == elem->getId()) continue;
+    if (vertex->getId() == elem->getId())
+      continue;
     // has Parent, has elem as Parent, it will be explicit added later;
-    if (vertex->hasLazyChild() && vertex->hasLazyChild(elem)) continue;
+    if (vertex->hasLazyChild() && vertex->hasLazyChild(elem))
+      continue;
     // Avoid blacklist edges;
     if (elem->hasBlacklistedChild(vertex) || vertex->hasBlacklistedChild(elem))
       continue;
@@ -322,10 +328,10 @@ std::vector<Edge> BiAIT::getOutgoingEdges(
   return outgoingEdges;
 }
 
-std::array<base::Cost, 3u> BiAIT::computeForwardEdgeKey(
-    const base::OptimizationObjectivePtr &optObjPtr,
-    const std::shared_ptr<Vertex> &parent,
-    const std::shared_ptr<Vertex> &child) {
+std::array<base::Cost, 3u>
+BiAIT::computeForwardEdgeKey(const base::OptimizationObjectivePtr &optObjPtr,
+                             const std::shared_ptr<Vertex> &parent,
+                             const std::shared_ptr<Vertex> &child) {
   // Parent is closer to the start;
   // g_F(x_p) + \hat{c}(x_p, x_c) + g_{R}(x_c),
   // g_F(x_p) + \hat{c}(x_p, x_c) + \hat{h}_{R}(x_c),
@@ -340,10 +346,10 @@ std::array<base::Cost, 3u> BiAIT::computeForwardEdgeKey(
           parent->costToStart_};
 }
 
-std::array<base::Cost, 3u> BiAIT::computeReverseEdgeKey(
-    const base::OptimizationObjectivePtr &optObjPtr,
-    const std::shared_ptr<Vertex> &parent,
-    const std::shared_ptr<Vertex> &child) {
+std::array<base::Cost, 3u>
+BiAIT::computeReverseEdgeKey(const base::OptimizationObjectivePtr &optObjPtr,
+                             const std::shared_ptr<Vertex> &parent,
+                             const std::shared_ptr<Vertex> &child) {
   // Parent is closer to the goal;
   //  g_R(x_p) + \hat{c}(x_p, x_c) + g_{F}(x_c),
   //  g_R(x_p) + \hat{c}(x_p, x_c) + \hat{h}_{F}(x_c),
@@ -358,28 +364,53 @@ std::array<base::Cost, 3u> BiAIT::computeReverseEdgeKey(
           parent->costToGoal_};
 }
 
-std::array<base::Cost, 2u> BiAIT::computeForwardVertexKey(
-    const std::shared_ptr<Vertex> &vertex) const {
+std::array<base::Cost, 2u>
+BiAIT::computeForwardVertexKey(const std::shared_ptr<Vertex> &vertex) const {
   // { min(h_hat{g-FL}(x), h_hat{rhs-FL}(x)) + g_hat{goal}, min(h_hat{g-FL}(x),
   // h_hat{rhs-FL}(x))};
   auto betterHeuristic =
       optObjPtr_->betterCost(vertex->heuristicCost_g_ForwardLazy_,
                              vertex->heuristicCost_rhs_ForwardLazy_);
-  return {optObjPtr_->combineCosts(betterHeuristic,
-                                   computeCostToGoalHeuristic(vertex)),
-          betterHeuristic};
+  if (isMeetInTheMiddleEnabled_) {
+    auto key_1 = Utility::worseCost(
+        optObjPtr_,
+        optObjPtr_->combineCosts(betterHeuristic,
+                                 computeCostToGoalHeuristic(vertex)),
+        optObjPtr_->combineCosts(betterHeuristic, betterHeuristic));
+    return {key_1, betterHeuristic};
+  } else if (isDFSEnabled_) {
+    return {optObjPtr_->combineCosts(betterHeuristic,
+                                     computeCostToGoalHeuristic(vertex)),
+            betterHeuristic};
+  } else {
+    // isBruteForceEnabled;
+    return {betterHeuristic, betterHeuristic};
+  }
 }
 
-std::array<base::Cost, 2u> BiAIT::computeReverseVertexKey(
-    const std::shared_ptr<Vertex> &vertex) const {
+std::array<base::Cost, 2u>
+BiAIT::computeReverseVertexKey(const std::shared_ptr<Vertex> &vertex) const {
   //  { min(h_hat{g-RL}(x), h_hat{rhs-RL}(x)) + g_hat{start},
   //  min(h_hat{g-RL}(x), h_hat{rhs-RL}(x))};
   auto betterHeuristic =
       optObjPtr_->betterCost(vertex->heuristicCost_g_ReverseLazy_,
                              vertex->heuristicCost_rhs_ReverseLazy_);
-  return {optObjPtr_->combineCosts(betterHeuristic,
-                                   computeCostToStartHeuristic(vertex)),
-          betterHeuristic};
+  if (isMeetInTheMiddleEnabled_) {
+
+    auto key_1 = Utility::worseCost(
+        optObjPtr_,
+        optObjPtr_->combineCosts(betterHeuristic,
+                                 computeCostToStartHeuristic(vertex)),
+        optObjPtr_->combineCosts(betterHeuristic, betterHeuristic));
+    return {key_1, betterHeuristic};
+  } else if (isDFSEnabled_) {
+    return {optObjPtr_->combineCosts(betterHeuristic,
+                                     computeCostToStartHeuristic(vertex)),
+            betterHeuristic};
+  } else {
+    // isBruteForceEnabled;
+    return {betterHeuristic, betterHeuristic};
+  }
 }
 
 base::Cost BiAIT::computeMeetLazyKey(const std::shared_ptr<Vertex> &parent,
@@ -601,10 +632,22 @@ bool BiAIT::iterate(
   bool performRV{performReverseValidSearch()};
   if (performFL || performFV || performRL || performRV) {
     if ((performFL && !performFV) || (performRL && !performRV)) {
-      if (performFL && numIterations_ % 2 == 1) {
+      auto forwardBestCost = forwardLazyQueue_.empty()
+                                 ? optObjPtr_->infiniteCost()
+                                 : forwardLazyQueue_.top()->data.first.at(0);
+
+      auto reverseBestCost = reverseLazyQueue_.empty()
+                                 ? optObjPtr_->infiniteCost()
+                                 : reverseLazyQueue_.top()->data.first.at(0);
+      if ((optObjPtr_->isCostBetterThan(forwardBestCost, reverseBestCost) or
+           (not performRL)) and
+          performFL) {
         iterateForwardLazySearch();
         ++numFLIteration;
-      } else if (performRL && numIterations_ % 2 == 0) {
+      } else if ((not optObjPtr_->isCostBetterThan(forwardBestCost,
+                                                   reverseBestCost) or
+                  (not performFL)) and
+                 performRL) {
         iterateReverseLazySearch();
         ++numRLIteration;
       }
@@ -657,7 +700,8 @@ base::PlannerStatus::StatusType BiAIT::updateSolution() {
 }
 
 void BiAIT::updateExactSolution() {
-  if (meetValidEdgeQueue_.empty()) return;
+  if (meetValidEdgeQueue_.empty())
+    return;
   // Check if the bestMeetEdge key is less than the current solution cost;
   if (optObjPtr_->isCostBetterThan(
           meetValidEdgeQueue_.top()->data.second.getMeetValidEdgeKey(),
@@ -681,37 +725,37 @@ void BiAIT::updateExactSolution() {
 void BiAIT::informAboutPlannerStatus(
     base::PlannerStatus::StatusType status) const {
   switch (status) {
-    case base::PlannerStatus::StatusType::EXACT_SOLUTION: {
-      OMPL_INFORM("%s (%u iterations): Found an exact solution of cost %.4f.",
-                  name_.c_str(), numIterations_, solutionCost_.value());
-      break;
-    }
-    case base::PlannerStatus::StatusType::APPROXIMATE_SOLUTION: {
-      OMPL_ERROR(
-          "%s (%u iterations): APPROXIMATE_SOLUTION is disabled. Solution not "
-          "found.",
-          name_.c_str(), numIterations_);
-      break;
-    }
-    case base::PlannerStatus::StatusType::TIMEOUT: {
-      OMPL_INFORM("%s (%u iterations): Solution not found.", name_.c_str(),
-                  numIterations_);
-      break;
-    }
-    case base::PlannerStatus::StatusType::UNKNOWN:
-    case base::PlannerStatus::StatusType::INVALID_START:
-    case base::PlannerStatus::StatusType::INVALID_GOAL:
-    case base::PlannerStatus::StatusType::UNRECOGNIZED_GOAL_TYPE:
-    case base::PlannerStatus::StatusType::CRASH:
-    case base::PlannerStatus::StatusType::ABORT:
-    case base::PlannerStatus::StatusType::TYPE_COUNT: {
-      OMPL_INFORM(
-          "%s (%u iterations): Unable to solve the given planning problem. The "
-          "PlannerStatus::StatusType is"
-          "UNKNOWN, INVALID_START, INVALID_GOAL, UNRECOGNIZED_GOAL_TYPE, "
-          "CRASH, ABORT, or TYPE_COUNT",
-          name_.c_str(), numIterations_);
-    }
+  case base::PlannerStatus::StatusType::EXACT_SOLUTION: {
+    OMPL_INFORM("%s (%u iterations): Found an exact solution of cost %.4f.",
+                name_.c_str(), numIterations_, solutionCost_.value());
+    break;
+  }
+  case base::PlannerStatus::StatusType::APPROXIMATE_SOLUTION: {
+    OMPL_ERROR(
+        "%s (%u iterations): APPROXIMATE_SOLUTION is disabled. Solution not "
+        "found.",
+        name_.c_str(), numIterations_);
+    break;
+  }
+  case base::PlannerStatus::StatusType::TIMEOUT: {
+    OMPL_INFORM("%s (%u iterations): Solution not found.", name_.c_str(),
+                numIterations_);
+    break;
+  }
+  case base::PlannerStatus::StatusType::UNKNOWN:
+  case base::PlannerStatus::StatusType::INVALID_START:
+  case base::PlannerStatus::StatusType::INVALID_GOAL:
+  case base::PlannerStatus::StatusType::UNRECOGNIZED_GOAL_TYPE:
+  case base::PlannerStatus::StatusType::CRASH:
+  case base::PlannerStatus::StatusType::ABORT:
+  case base::PlannerStatus::StatusType::TYPE_COUNT: {
+    OMPL_INFORM(
+        "%s (%u iterations): Unable to solve the given planning problem. The "
+        "PlannerStatus::StatusType is"
+        "UNKNOWN, INVALID_START, INVALID_GOAL, UNRECOGNIZED_GOAL_TYPE, "
+        "CRASH, ABORT, or TYPE_COUNT",
+        name_.c_str(), numIterations_);
+  }
   }
   informRunTimeStatus();
 }
@@ -845,11 +889,11 @@ std::shared_ptr<geometric::PathGeometric> BiAIT::getPathToGoal() const {
     std::shared_ptr<geometric::PathGeometric> path =
         std::make_shared<geometric::PathGeometric>(spaceInformationPtr_);
     assert(bestMeetEdge->data.second
-               .getCategory()[2]);  // Its category should be 0b00100;
+               .getCategory()[2]); // Its category should be 0b00100;
     // Query to start;
     std::vector<std::shared_ptr<Vertex>>
-        invertedPathToStart{};  // Retrieve the vertices vector and store
-                                // reversely;
+        invertedPathToStart{}; // Retrieve the vertices vector and store
+                               // reversely;
     auto currentVertexToStart = bestMeetEdge->data.second.getParent();
     do {
       invertedPathToStart.emplace_back(currentVertexToStart);
@@ -859,7 +903,7 @@ std::shared_ptr<geometric::PathGeometric> BiAIT::getPathToGoal() const {
     path->append(implicitGraph_.getStartVertices().at(0)->getState());
     for (auto crIter = invertedPathToStart.crbegin();
          crIter != invertedPathToStart.crend(); ++crIter) {
-      path->append((*crIter)->getState());  // (*crIter) is shared_ptr;
+      path->append((*crIter)->getState()); // (*crIter) is shared_ptr;
     }
 
     // Query to goal;
@@ -1013,7 +1057,8 @@ void BiAIT::insertOrUpdateMeetValidEdge(
     const std::shared_ptr<Vertex> &vertex) const {
   // Find the `vertex` related meetValidEdge(s);
   for (const auto &elem : vertex->meetValidEdgeQueuePointer_) {
-    if (elem == nullptr) continue;
+    if (elem == nullptr)
+      continue;
     assert(vertex->getId() == elem->data.second.getParent()->getId() ||
            vertex->getId() == elem->data.second.getChild()->getId());
     base::Cost newMeetValidKey =
@@ -1118,24 +1163,28 @@ bool BiAIT::performReverseLazySearch() {
 }
 
 bool BiAIT::performForwardValidSearch() {
-  if (forwardValidQueue_.empty()) return false;
+  if (forwardValidQueue_.empty())
+    return false;
   // If the best edge in the forward valid queue has a potential total solution
   // cost of infinity, the forward valid search does not need to be continued.
   // This can happen if the lazy search did not reach each other;
   base::Cost bestEdgeCost = optObjPtr_->infiniteCost();
   bestEdgeCost = forwardValidQueue_.top()->data.getEdgeKey()[0u];
-  if (!optObjPtr_->isFinite(bestEdgeCost)) return false;
+  if (!optObjPtr_->isFinite(bestEdgeCost))
+    return false;
   return optObjPtr_->isCostBetterThan(bestEdgeCost, solutionCost_);
 }
 
 bool BiAIT::performReverseValidSearch() {
-  if (reverseValidQueue_.empty()) return false;
+  if (reverseValidQueue_.empty())
+    return false;
   // If the best edge in the reverse valid queue has a potential total solution
   // cost of infinity, the reverse valid search does not need to be continued.
   // This can happen if the lazy search did not reach each other;
   base::Cost bestEdgeCost = optObjPtr_->infiniteCost();
   bestEdgeCost = reverseValidQueue_.top()->data.getEdgeKey()[0u];
-  if (!optObjPtr_->isFinite(bestEdgeCost)) return false;
+  if (!optObjPtr_->isFinite(bestEdgeCost))
+    return false;
   return optObjPtr_->isCostBetterThan(bestEdgeCost, solutionCost_);
 }
 
@@ -1159,7 +1208,8 @@ void BiAIT::iterateForwardLazySearch() {
     vertex->validQueueIncomingLookupFromGoal_.clear();
   }
 
-  if (vertex->isConsistentInForwardLazySearch()) return;
+  if (vertex->isConsistentInForwardLazySearch())
+    return;
   // Check if the vertex is under consistent (rhs[s] < g[s]);
   if (optObjPtr_->isCostBetterThan(vertex->heuristicCost_rhs_ForwardLazy_,
                                    vertex->heuristicCost_g_ForwardLazy_) ||
@@ -1201,7 +1251,8 @@ void BiAIT::iterateReverseLazySearch() {
     vertex->validQueueIncomingLookupFromStart_.clear();
   }
 
-  if (vertex->isConsistentInReverseLazySearch()) return;
+  if (vertex->isConsistentInReverseLazySearch())
+    return;
   // Check if the vertex is under consistent (g[s] < v[s])
   if (optObjPtr_->isCostBetterThan(vertex->heuristicCost_rhs_ReverseLazy_,
                                    vertex->heuristicCost_g_ReverseLazy_) ||
@@ -1265,7 +1316,7 @@ void BiAIT::iterateForwardValidSearch() {
       if (optObjPtr_->isCostBetterThan(
               optObjPtr_->combineCosts(parent->costToStart_, edgeCost),
               child->costToStart_)) {
-        child->setForwardValidParent(parent, edgeCost);  // Rewire;
+        child->setForwardValidParent(parent, edgeCost); // Rewire;
         parent->addToForwardValidChildren(child);
         child->setCategory(4, true);
         updateCostToStartOfForwardValidDescendant(child);
@@ -1273,7 +1324,7 @@ void BiAIT::iterateForwardValidSearch() {
         insertOrUpdateForwardValidQueue(getOutgoingEdges(child));
 
         if (!child->meetLazyEdgeQueuePointer_
-                 .empty()) {  // Child must be the parent of the meetLazyEdge;
+                 .empty()) { // Child must be the parent of the meetLazyEdge;
           auto tempVector = child->meetLazyEdgeQueuePointer_;
           for (const auto &elem : tempVector) {
             checkMeetLazyEdgeToValid(elem);
@@ -1281,7 +1332,8 @@ void BiAIT::iterateForwardValidSearch() {
         }
         for (const auto &elem : implicitGraph_.getNeighbors(child)) {
           // Avoid meaningless checking;
-          if (!elem->getCategory()[1]) continue;
+          if (!elem->getCategory()[1])
+            continue;
           if (child->hasBlacklistedChild(elem) ||
               elem->hasBlacklistedChild(child))
             continue;
@@ -1348,7 +1400,7 @@ void BiAIT::iterateReverseValidSearch() {
       if (optObjPtr_->isCostBetterThan(
               optObjPtr_->combineCosts(parent->costToGoal_, edgeCost),
               child->costToGoal_)) {
-        child->setReverseValidParent(parent, edgeCost);  // Rewire;
+        child->setReverseValidParent(parent, edgeCost); // Rewire;
         parent->addToReverseValidChildren(child);
         child->setCategory(1, true);
         updateCostToGoalOfReverseValidDescendant(child);
@@ -1356,7 +1408,7 @@ void BiAIT::iterateReverseValidSearch() {
         insertOrUpdateReverseValidQueue(getOutgoingEdges(child));
 
         if (!child->meetLazyEdgeQueuePointer_
-                 .empty()) {  // Child must be the parent of the meetLazyEdge;
+                 .empty()) { // Child must be the parent of the meetLazyEdge;
           auto tempVector = child->meetLazyEdgeQueuePointer_;
           for (const auto &elem : tempVector) {
             checkMeetLazyEdgeToValid(elem);
@@ -1364,7 +1416,8 @@ void BiAIT::iterateReverseValidSearch() {
         }
         for (const auto &elem : implicitGraph_.getNeighbors(child)) {
           // Avoid meaningless checking;
-          if (!elem->getCategory()[4]) continue;
+          if (!elem->getCategory()[4])
+            continue;
           if (child->hasBlacklistedChild(elem) ||
               elem->hasBlacklistedChild(child))
             continue;
@@ -1517,7 +1570,8 @@ void BiAIT::invalidateForwardLazyBranch(const std::shared_ptr<Vertex> &vertex) {
         vertex->getId());
     vertex->resetForwardLazyParent();
   }
-  if (vertex->getCategory()[4]) vertex->setCategory(3, true);
+  if (vertex->getCategory()[4])
+    vertex->setCategory(3, true);
 
   // Update the cost of all forward lazy children;
   for (const auto &elem : vertex->getForwardLazyChildren()) {
@@ -1664,7 +1718,8 @@ void BiAIT::invalidateReverseLazyBranch(const std::shared_ptr<Vertex> &vertex) {
         vertex->getId());
     vertex->resetReverseLazyParent();
   }
-  if (vertex->getCategory()[1]) vertex->setCategory(0, true);
+  if (vertex->getCategory()[1])
+    vertex->setCategory(0, true);
 
   // Update the cost of all reverse lazy children;
   for (const auto &elem : vertex->getReverseLazyChildren()) {
@@ -2303,7 +2358,8 @@ void BiAIT::updateReverseLazyNeighbors(const std::shared_ptr<Vertex> &vertex) {
 
 void BiAIT::propagateCostFromStartInRLTree(
     const std::shared_ptr<Vertex> &vertex) {
-  if (implicitGraph_.isGoal(vertex)) return;
+  if (implicitGraph_.isGoal(vertex))
+    return;
   if (const auto parent = vertex->getReverseLazyParent()) {
     auto candidateParentCostFromStart =
         optObjPtr_->combineCosts(vertex->heuristicCost_g_ForwardLazy_,
@@ -2325,7 +2381,8 @@ void BiAIT::propagateCostFromStartInRLTree(
 }
 
 void BiAIT::propagateCostToGoalInFLTree(const std::shared_ptr<Vertex> &vertex) {
-  if (implicitGraph_.isStart(vertex)) return;
+  if (implicitGraph_.isStart(vertex))
+    return;
   if (const auto parent = vertex->getForwardLazyParent()) {
     auto candidateParentCostToGoal =
         optObjPtr_->combineCosts(vertex->heuristicCost_g_ReverseLazy_,
@@ -2391,7 +2448,8 @@ MeetLazyEdgeQueue::Element *BiAIT::findInMeetLazyQueue(const Edge &edge) {
                              elem.getChild().lock()->getId() == parentId);
                    });
   // `edge` is not in the `meetLazyEdgeQueue_`, and return nullptr;
-  if (found == meetLazyEdges.end()) return nullptr;
+  if (found == meetLazyEdges.end())
+    return nullptr;
   // Else, we try to figure out the pointer to the meetLazyEdge in
   // `meetLazyEdgeQueue_`;
   else {
@@ -2429,7 +2487,8 @@ MeetLazyEdgeQueue::Element *BiAIT::findInMeetLazyQueue(const WeakEdge &edge) {
                              elem.getChild().lock()->getId() == parentId);
                    });
   // `edge` is not in the `meetLazyEdgeQueue_`, and return nullptr;
-  if (found == meetLazyEdges.end()) return nullptr;
+  if (found == meetLazyEdges.end())
+    return nullptr;
   // Else, we try to figure out the pointer to the meetLazyEdge in
   // `meetLazyEdgeQueue_`;
   else {
@@ -2466,7 +2525,8 @@ MeetValidEdgeQueue::Element *BiAIT::findInMeetValidQueue(const Edge &edge) {
                              elem.second.getChild()->getId() == parentId);
                    });
   // `edge` is not in the `meetValidEdgeQueue_`, and return nullptr;
-  if (found == meetValidEdges.end()) return nullptr;
+  if (found == meetValidEdges.end())
+    return nullptr;
   // Else, we try to figure out the pointer to the meetValidEdge in
   // `meetValidEdgeQueue_`;
   else {
@@ -2582,4 +2642,4 @@ void BiAIT::checkMeetLazyEdgeToValid(
     }
   }
 }
-}  // namespace ompl::geometric
+} // namespace ompl::geometric
